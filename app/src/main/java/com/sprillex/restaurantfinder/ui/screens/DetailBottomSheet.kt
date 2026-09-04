@@ -3,10 +3,13 @@ package com.sprillex.restaurantfinder.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.data.Restaurant
@@ -18,6 +21,8 @@ import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 @Composable
 fun DetailBottomSheet(
     restaurant: Restaurant,
+    isFavorite: Boolean,
+    onFavoriteToggle: () -> Unit,
     onDismiss: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
@@ -32,11 +37,25 @@ fun DetailBottomSheet(
                 .fillMaxWidth()
                 .padding(24.dp)
         ) {
-            Text(
-                text = restaurant.name,
-                style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onFavoriteToggle) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -47,11 +66,12 @@ fun DetailBottomSheet(
                 color = TextSecondary
             )
 
-            val fullAddress = listOfNotNull(
-                restaurant.housenumber?.let { "$it " } ?: "" + (restaurant.street ?: ""),
-                restaurant.city,
-                restaurant.postcode
-            ).filter { it.isNotBlank() }.joinToString(", ")
+            val streetLine = listOfNotNull(restaurant.housenumber, restaurant.street)
+                .filter { it.isNotBlank() }
+                .joinToString(" ")
+            val fullAddress = listOfNotNull(streetLine.ifBlank { null }, restaurant.city, restaurant.postcode)
+                .filter { it.isNotBlank() }
+                .joinToString(", ")
 
             if (fullAddress.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))

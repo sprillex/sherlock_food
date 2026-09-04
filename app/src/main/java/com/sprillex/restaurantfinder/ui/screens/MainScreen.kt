@@ -5,7 +5,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,8 +24,12 @@ import com.sprillex.restaurantfinder.ui.components.RestaurantCard
 @Composable
 fun MainScreen(
     restaurants: List<Restaurant>,
+    favoriteIds: Set<Long>,
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
+    onFavoriteToggle: (Long) -> Unit,
+    onBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit,
     onRestaurantClick: (Restaurant) -> Unit,
     onNavigateClick: (Restaurant) -> Unit,
     onCallClick: (Restaurant) -> Unit,
@@ -31,19 +37,23 @@ fun MainScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedAmenity by remember { mutableStateOf<String?>(null) }
+    var showOnlyFavorites by remember { mutableStateOf(false) }
     var anchorMenuExpanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("All", "restaurant", "fast_food", "cafe", "bar", "pub")
+    val categories = listOf("All", "Favorites", "restaurant", "fast_food", "cafe", "bar", "pub")
 
-    val filteredRestaurants = remember(restaurants, searchQuery, selectedAmenity, selectedAnchor) {
+    val filteredRestaurants = remember(restaurants, favoriteIds, searchQuery, selectedAmenity, showOnlyFavorites, selectedAnchor) {
         restaurants.filter { r ->
             val matchesQuery = searchQuery.isEmpty() ||
                     r.name.contains(searchQuery, ignoreCase = true) ||
                     (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
                     (r.city?.contains(searchQuery, ignoreCase = true) == true)
 
-            val matchesCategory = selectedAmenity == null || selectedAmenity == "All" ||
-                    r.amenity.equals(selectedAmenity, ignoreCase = true)
+            val matchesCategory = when (selectedAmenity) {
+                "Favorites" -> favoriteIds.contains(r.id)
+                "All", null -> true
+                else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
+            }
 
             matchesQuery && matchesCategory
         }.map { r ->
@@ -63,7 +73,7 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Near " + selectedAnchor.name, style = MaterialTheme.typography.titleLarge)
+                        Text("Near " + selectedAnchor.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         IconButton(onClick = { anchorMenuExpanded = true }) {
                             Icon(Icons.Default.LocationOn, contentDescription = "Change Anchor")
                         }
@@ -83,6 +93,14 @@ fun MainScreen(
                         }
                     }
                 },
+                actions = {
+                    IconButton(onClick = onBackupClick) {
+                        Icon(Icons.Default.Backup, contentDescription = "Export Backup")
+                    }
+                    IconButton(onClick = onRestoreClick) {
+                        Icon(Icons.Default.Restore, contentDescription = "Restore Backup")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
@@ -92,7 +110,6 @@ fun MainScreen(
                 .padding(innerPadding)
                 .fillMaxSize()
         ) {
-            // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -104,7 +121,6 @@ fun MainScreen(
                 singleLine = true
             )
 
-            // Category Chips
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -122,7 +138,6 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Results List
             if (filteredRestaurants.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No restaurants found", style = MaterialTheme.typography.bodyLarge)
@@ -133,6 +148,8 @@ fun MainScreen(
                         RestaurantCard(
                             restaurant = restaurant,
                             distanceFormatted = DistanceCalculator.formatDistance(distMiles),
+                            isFavorite = favoriteIds.contains(restaurant.id),
+                            onFavoriteToggle = { onFavoriteToggle(restaurant.id) },
                             onClick = { onRestaurantClick(restaurant) },
                             onNavigateClick = { onNavigateClick(restaurant) },
                             onCallClick = { onCallClick(restaurant) },

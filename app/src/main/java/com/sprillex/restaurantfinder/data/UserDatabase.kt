@@ -5,22 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Restaurant::class], version = 1, exportSchema = false)
-abstract class AppDatabase : RoomDatabase() {
-    abstract fun restaurantDao(): RestaurantDao
+@Database(entities = [Favorite::class], version = 1, exportSchema = false)
+abstract class UserDatabase : RoomDatabase() {
+    abstract fun favoriteDao(): FavoriteDao
 
     companion object {
         @Volatile
-        private var INSTANCE: AppDatabase? = null
+        private var INSTANCE: UserDatabase? = null
 
-        fun getDatabase(context: Context): AppDatabase {
+        fun getDatabase(context: Context): UserDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    AppDatabase::class.java,
-                    "regional_restaurants.db"
+                    UserDatabase::class.java,
+                    "user_data.db"
                 )
-                    .createFromAsset("regional_restaurants.db")
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

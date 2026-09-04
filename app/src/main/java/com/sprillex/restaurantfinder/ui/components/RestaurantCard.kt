@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.*
@@ -20,6 +22,8 @@ import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 fun RestaurantCard(
     restaurant: Restaurant,
     distanceFormatted: String,
+    isFavorite: Boolean,
+    onFavoriteToggle: () -> Unit,
     onClick: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
@@ -49,20 +53,31 @@ fun RestaurantCard(
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = distanceFormatted,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onFavoriteToggle) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
+                        )
+                    }
+                    Text(
+                        text = distanceFormatted,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             val category = restaurant.cuisine ?: restaurant.amenity.replace('_', ' ')
-            val address = listOfNotNull(
-                restaurant.housenumber?.let { "$it " } ?: "" + (restaurant.street ?: ""),
-                restaurant.city
-            ).filter { it.isNotBlank() }.joinToString(", ")
+            val streetLine = listOfNotNull(restaurant.housenumber, restaurant.street)
+                .filter { it.isNotBlank() }
+                .joinToString(" ")
+            val address = listOfNotNull(streetLine.ifBlank { null }, restaurant.city)
+                .filter { it.isNotBlank() }
+                .joinToString(", ")
 
             Text(
                 text = category.replaceFirstChar { it.uppercase() },
@@ -92,7 +107,7 @@ fun RestaurantCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                if (!restaurant.phone.isNull_or_empty()) {
+                if (!restaurant.phone.isNullOrBlank()) {
                     IconButton(onClick = onCallClick) {
                         Icon(
                             imageVector = Icons.Default.Call,
@@ -101,7 +116,7 @@ fun RestaurantCard(
                         )
                     }
                 }
-                if (!restaurant.website.isNull_or_empty()) {
+                if (!restaurant.website.isNullOrBlank()) {
                     IconButton(onClick = onWebsiteClick) {
                         Icon(
                             imageVector = Icons.Default.Language,
@@ -114,5 +129,3 @@ fun RestaurantCard(
         }
     }
 }
-
-private fun String?.isNull_or_empty(): Boolean = this.isNullOrBlank()
