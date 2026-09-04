@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Terminal Build Automator README</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #1e1e1e;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+        h1, h2, h3 {
+            color: #ffffff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            margin-top: 1.5em;
+        }
+        h1 {
+            border-bottom: 2px solid #4CAF50;
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        a {
+            color: #64ffda;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        pre {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid #404040;
+        }
+        code {
+            font-family: "Fira Code", Consolas, Monaco, "Courier New", Courier, monospace;
+            background-color: #2d2d2d;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #64ffda;
+        }
+        pre code {
+            padding: 0;
+            background-color: transparent;
+            color: #e0e0e0;
+        }
+        .keyword { color: #c678dd; } /* Purple/magenta */
+        .string { color: #98c379; }  /* Green */
+        .comment { color: #7f848e; font-style: italic; } /* Gray */
+        hr {
+            border: 0;
+            height: 1px;
+            background: #333;
+            margin: 30px 0;
+        }
+        ul, ol {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        strong {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Android Terminal Build Automator</h1>
+        <p>A lightweight, terminal-first bash utility designed to clone Android repositories, automatically repair common local environment discrepancies (like SDK paths and Gradle versions), and generate a custom, one-click update and deployment script for that specific app. This completely bypasses the need for heavy IDEs or graphical app managers.</p>
+
+        <h2>🚀 Quick Start & Usage</h2>
+
+        <h3>1. Initial Setup</h3>
+        <p>Run the setup script and pass the target GitHub repository URL as the only argument:</p>
+        <pre><code><span class="comment"># Make the script executable (first time only)</span>
+<span class="keyword">chmod</span> +x clone_android.sh
+
+<span class="comment"># Clone and configure the target app</span>
+<span class="keyword">./clone_android.sh</span> <span class="string">https://github.com/username/projectname</span></code></pre>
+
+        <h3>2. Updating & Installing the App</h3>
+        <p>Once the setup script finishes, it will generate a dedicated update script inside the cloned project folder.</p>
+        <p>Whenever you want to pull the latest code, compile a fresh APK, and install it to your connected device, simply run:</p>
+        <pre><code><span class="comment"># Example: If your project was named "map"</span>
+<span class="keyword">~/AndroidStudioProjects/map/update_map.sh</span></code></pre>
+
+        <hr>
+
+        <h2>📖 Detailed Information: How It Works</h2>
+        <p>This tool is split into two phases: the initial environment configuration (<code>clone_android.sh</code>) and the ongoing deployment (<code>update_&lt;project&gt;.sh</code>).</p>
+
+        <h3>Phase 1: <code>clone_android.sh</code> (The Setup)</h3>
+        <p>When you run the main script, it performs the following automated steps:</p>
+        <ol>
+            <li><strong>Workspace Management:</strong> Clones the targeted GitHub repository into your default <code>~/AndroidStudioProjects</code> directory.</li>
+            <li><strong>Gradle Version Pinning:</strong> Forces the project to use Gradle version 8.7. It modifies <code>gradle-wrapper.properties</code> and ensures the <code>gradlew</code> executable is present and correctly permissioned, preventing build failures due to version mismatches.</li>
+            <li><strong>SDK Path Configuration:</strong> Automatically creates a <code>local.properties</code> file so Gradle knows where your Android SDK lives. It will attempt to copy a known-good configuration from a reference project (<code>foodscan</code>) or fallback to the standard Linux SDK path (<code>$HOME/Android/Sdk</code>).</li>
+            <li><strong>Git Housekeeping:</strong> Uses Git's <code>skip-worktree</code> and <code>.git/info/exclude</code> to hide the local modifications to the Gradle wrapper and SDK paths. This prevents you from accidentally committing these local fixes back to the public repository.</li>
+            <li><strong>Automation Generation:</strong> Dynamically writes the <code>update_&lt;project&gt;.sh</code> script tailored specifically for the app you just cloned.</li>
+        </ol>
+
+        <h3>Phase 2: The Generated <code>update_&lt;project&gt;.sh</code> Script</h3>
+        <p>This customized script lives in the root of your newly cloned project and handles all future maintenance. Every time you run it, it will:</p>
+        <ol>
+            <li><strong>Sync:</strong> Run <code>git pull</code> to fetch the latest commits from the developer.</li>
+            <li><strong>Build:</strong> Execute <code>./gradlew assembleDebug</code> to compile a fresh debug APK.</li>
+            <li><strong>Archive:</strong> Rename the generated APK to include a precise timestamp (e.g., <code>Projectname-B2026-05-01-15-30.apk</code>) and save a copy into a dedicated <code>builds/</code> directory for version history.</li>
+            <li><strong>Deploy:</strong> Use <code>adb</code> to check for a connected Android device. If a device is found, it automatically installs the newly compiled APK.</li>
+        </ol>
+
+        <h3>Prerequisites</h3>
+        <p>To use these scripts successfully, ensure your terminal environment has the following available:</p>
+        <ul>
+            <li><code>git</code></li>
+            <li><code>gradle</code> (System level, for initial wrapper generation)</li>
+            <li><code>adb</code> (Android Debug Bridge, for installing to your device)</li>
+            <li>Java Development Kit (JDK) compatible with Android builds</li>
+        </ul>
+    </div>
+</body>
+</html>
