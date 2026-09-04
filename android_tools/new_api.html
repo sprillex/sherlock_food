@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastAPI Android Build Automation Service Setup</title>
+  <style>
+    :root {
+      --bg-primary: #121212;
+      --bg-secondary: #1e1e1e;
+      --bg-tertiary: #2a2a2a;
+      --text-primary: #e0e0e0;
+      --text-secondary: #a0a0a0;
+      --accent: #bb86fc;
+      --accent-variant: #3700b3;
+      --code-bg: #181818;
+      --border-color: #333333;
+      --success: #03dac6;
+      --warning: #cf6679;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+    }
+
+    h1 {
+      color: var(--accent);
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      color: var(--success);
+      font-size: 1.4rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.3rem;
+    }
+
+    h3 {
+      color: var(--text-primary);
+      font-size: 1.1rem;
+      margin-top: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    code {
+      font-family: "JetBrains Mono", Consolas, Monaco, "Courier New", Courier, monospace;
+      font-size: 0.9em;
+      background-color: var(--code-bg);
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      color: var(--accent);
+      border: 1px solid var(--border-color);
+    }
+
+    pre {
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      color: #f8f8f2;
+      font-size: 0.9rem;
+    }
+
+    .card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: var(--bg-tertiary);
+      color: var(--success);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Android Build Automation Service Setup</h1>
+      <p>A minimal, asynchronous FastAPI daemon configured with systemd to trigger local Android build scripts safely.</p>
+    </header>
+
+    <!-- Step 1 -->
+    <section class="card">
+      <span class="badge">Step 1</span>
+      <h2>Set Up Project Directory and Virtual Environment</h2>
+      <p>Create a dedicated directory, set appropriate permissions, and prepare the Python virtual environment.</p>
+      <pre><code>sudo mkdir -p /opt/builder-api
+sudo chown -R james:james /opt/builder-api
+cd /opt/builder-api
+
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn</code></pre>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="card">
+      <span class="badge">Step 2</span>
+      <h2>Write the API Server</h2>
+      <p>Save the following Python code to <code>/opt/builder-api/server.py</code>. It executes build jobs asynchronously in the background and returns a tracking <code>job_id</code> immediately.</p>
+      <pre><code>import subprocess
+import uuid
+import re
+from typing import Optional, Dict
+from fastapi import FastAPI, BackgroundTasks, Header, HTTPException, status
+from pydantic import BaseModel
+
+app = FastAPI(title="Android Build Trigger API")
+
+# Define your secure pre-shared token
+API_KEY = "CHANGE_ME_TO_A_SECURE_RANDOM_STRING"
+
+# In-memory job state tracker
+jobs: Dict[str, Dict[str, str]] = {}
+
+# Input models
+class CloneRequest(BaseModel):
+    repo: str  # Project name or full git URL
+
+class UpdateRequest(BaseModel):
+    project: str
+    branch_flag: Optional[str] = None  # e.g. "-m", "-n", or explicit branch name
+
+def sanitize_input(val: str) -> bool:
+    # Allow alphanumeric, hyphen, underscore, dot, and standard git URL characters
+    return bool(re.match(r"^[a-zA-Z0-9_./:-]+$", val))
+
+def run_script_task(job_id: str, script_cmd: list):
+    try:
+        res = subprocess.run(
+            script_cmd,
+            capture_output=True,
+            text=True,
+            timeout=900  # 15 min hard limit
+        )
+        if res.returncode == 0:
+            jobs[job_id] = {
+                "status": "success",
+                "output": res.stdout[-4000:]  # Keep last 4KB of log
+            }
+        else:
+            jobs[job_id] = {
+                "status": "failed",
+                "output": res.stderr[-4000:] or res.stdout[-4000:]
+            }
+    except Exception as e:
+        jobs[job_id] = {
+            "status": "error",
+            "output": str(e)
+        }
+
+def authenticate(authorization: Optional[str]):
+    if not authorization or authorization != f"Bearer {API_KEY}":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing Authorization header"
+        )
+
+@app.post("/clone", status_code=status.HTTP_202_ACCEPTED)
+def clone_and_build(
+    payload: CloneRequest,
+    background_tasks: BackgroundTasks,
+    authorization: Optional[str] = Header(None)
+):
+    authenticate(authorization)
+    
+    if not sanitize_input(payload.repo):
+        raise HTTPException(status_code=400, detail="Invalid characters in repo target.")
+
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {"status": "running", "output": ""}
+    
+    background_tasks.add_task(
+        run_script_task,
+        job_id,
+        ["/opt/julebot/bin/clone_android.sh", payload.repo]
+    )
+    return {"job_id": job_id, "status": "queued"}
+
+@app.post("/update", status_code=status.HTTP_202_ACCEPTED)
+def update_and_build(
+    payload: UpdateRequest,
+    background_tasks: BackgroundTasks,
+    authorization: Optional[str] = Header(None)
+):
+    authenticate(authorization)
+
+    if not sanitize_input(payload.project):
+        raise HTTPException(status_code=400, detail="Invalid characters in project name.")
+
+    update_script = f"/home/james/sprillex/android/{payload.project}/update.sh"
+    cmd = [update_script]
+    if payload.branch_flag:
+        if not sanitize_input(payload.branch_flag):
+            raise HTTPException(status_code=400, detail="Invalid characters in branch flag.")
+        cmd.append(payload.branch_flag)
+
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {"status": "running", "output": ""}
+
+    background_tasks.add_task(run_script_task, job_id, cmd)
+    return {"job_id": job_id, "status": "queued"}
+
+@app.get("/status/{job_id}")
+def get_job_status(job_id: str, authorization: Optional[str] = Header(None)):
+    authenticate(authorization)
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"job_id": job_id, **jobs[job_id]}</code></pre>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="card">
+      <span class="badge">Step 3</span>
+      <h2>Create and Enable the Systemd Service</h2>
+      <p>Create the unit configuration file at <code>/etc/systemd/system/android-builder.service</code>:</p>
+      <pre><code>[Unit]
+Description=Android Build Automation FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=julebot
+Group=julebot
+WorkingDirectory=/opt/builder-api
+ExecStart=/opt/builder-api/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080 --workers 1
+Restart=always
+RestartSec=5
+
+# Security Hardening
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+      <p>Apply permissions, reload the systemd configuration, and enable the service:</p>
+      <pre><code># Ensure julebot has permissions over the app directory
+sudo chown -R julebot:julebot /opt/builder-api
+
+# Reload and start service
+sudo systemctl daemon-reload
+sudo systemctl enable --now android-builder.service
+
+# Check execution status
+sudo systemctl status android-builder.service</code></pre>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="card">
+      <span class="badge">Step 4</span>
+      <h2>Client Interaction Reference</h2>
+
+      <h3>1. Trigger a Clone &amp; Build Job</h3>
+      <pre><code>POST http://&lt;PC_IP&gt;:8080/clone
+Headers:
+  Authorization: Bearer CHANGE_ME_TO_A_SECURE_RANDOM_STRING
+  Content-Type: application/json
+Body:
+  {"repo": "reviewassistant"}</code></pre>
+      <p>Response (<code>HTTP 202 Accepted</code>):</p>
+      <pre><code>{
+  "job_id": "c16194b5-6548-43bb-8a60-a29d5b78f447",
+  "status": "queued"
+}</code></pre>
+
+      <h3>2. Poll Job Status</h3>
+      <pre><code>GET http://&lt;PC_IP&gt;:8080/status/c16194b5-6548-43bb-8a60-a29d5b78f447
+Headers:
+  Authorization: Bearer CHANGE_ME_TO_A_SECURE_RANDOM_STRING</code></pre>
+      <p>Response upon completion (<code>HTTP 200 OK</code>):</p>
+      <pre><code>{
+  "job_id": "c16194b5-6548-43bb-8a60-a29d5b78f447",
+  "status": "success",
+  "output": "BUILD SUCCESSFUL in 42s\n✅ Build complete: /home/james/sprillex/android/reviewassistant/builds/Reviewassistant-B2026-08-26-23-18.apk"
+}</code></pre>
+    </section>
+  </div>
+</body>
+</html>

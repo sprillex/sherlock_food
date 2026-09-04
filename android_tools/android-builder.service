@@ -1,0 +1,21 @@
+[Unit]
+Description=Sprillex Android Build Automation FastAPI Service
+After=network.target
+
+[Service]
+Type=simple
+User=julebot
+Group=julebot
+WorkingDirectory=/opt/builder-api
+EnvironmentFile=/opt/builder-api/.env
+ExecStart=/opt/builder-api/venv/bin/uvicorn server:app --host ${API_HOST} --port ${API_PORT} --workers 1
+Restart=always
+RestartSec=5
+
+# Security Hardening
+PrivateTmp=true
+ProtectSystem=full
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
