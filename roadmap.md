@@ -6,7 +6,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 1: Local Data Layer & Asset Ingestion
 
-1. **Room Entity & Asset Pre-population**
+1. **[x] Room Entity & Asset Pre-population**
    - Define `@Entity(tableName = "restaurants")` matching the pre-built `regional_restaurants.db` schema:
      - `id`: `Long` (`@PrimaryKey`, OSM stable 64-bit ID)
      - `name`: `String`
@@ -23,14 +23,14 @@ This roadmap outlines the complete architecture, UI design standards, location m
      - `last_updated`: `Long`
    - Configure Room Database builder to pre-populate from asset: `createFromAsset("regional_restaurants.db")`.
 
-2. **DAO Query Design & Spatial Indexing**
+2. **[x] DAO Query Design & Spatial Indexing**
    - Leverage SQLite B-tree indices (`index_restaurants_latitude_longitude`, `index_restaurants_amenity`, `index_restaurants_cuisine`, `index_restaurants_city`).
    - Implement bounding-box queries for map and proximity searches:
      `WHERE latitude BETWEEN :minLat AND :maxLat AND longitude BETWEEN :minLng AND :maxLng`
    - Dynamic category/amenity filters (`WHERE amenity IN (:amenityList)`).
    - Text search query across `name`, `cuisine`, and `city` fields using SQLite `LIKE`.
 
-3. **User Data Separation**
+3. **[x] User Data Separation**
    - Maintain user state (e.g., `user_favorites`, `visited_logs`) in separate Room tables referencing `restaurant_id` as a foreign key.
    - Ensures OTA database updates using `@Upsert` on `restaurants` will never overwrite or erase user personal data.
 
@@ -38,15 +38,15 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 2: Location Engine & Geographic Calculation
 
-1. **Device Proximity & Location Provider**
+1. **[x] Device Proximity & Location Provider**
    - Implement runtime permission handler for `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`.
    - Utilize FusedLocationProviderClient to obtain last-known/single-fix device location on launch (avoiding continuous battery-draining GPS polling).
 
-2. **Manual Anchor Point & Area Override**
+2. **[x] Manual Anchor Point & Area Override**
    - Support manual municipality selection (e.g., Toledo, Perrysburg, Monroe, Adrian) or custom map pin anchor coordinates.
    - Active location state toggle: "Use GPS Location" vs. "Use Selected Anchor Area".
 
-3. **Client-Side Distance Calculation & Sorting**
+3. **[x] Client-Side Distance Calculation & Sorting**
    - Calculate straight-line distance using Haversine formula or `Location.distanceBetween` from active anchor point to candidate venues.
    - Format and expose formatted distance strings (e.g., "0.4 mi", "1.2 mi", "850 ft") in the UI.
    - Enable ascending distance sorting for candidate feeds.
@@ -55,7 +55,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 3: Core UI Architecture & Robust Dark Mode Standards
 
-1. **Screen Layouts**
+1. **[x] Screen Layouts**
    - **Main Directory Screen:**
      - Top App Bar with active anchor indicator ("Near Current Location" or "Near Adrian, MI") and area override picker.
      - Search bar for quick text filtering by venue name or cuisine tag.
@@ -65,7 +65,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
      - Complete venue address, category, cuisine tags, phone number, and website URL.
      - Quick action bar: Navigate (Map Intent), Call (Dialer Intent), Visit Web (Browser Intent).
 
-2. **Robust Dark Mode Implementation (Ecosystem Mandate)**
+2. **[x] Robust Dark Mode Implementation (Ecosystem Mandate)**
    - **Base Palette:**
      - Pure black (`#000000`) is strictly avoided to prevent OLED smearing and visual halation.
      - Base background (`--bg-body`): `#121212`.
@@ -85,12 +85,12 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 4: System Integrations & External Launchers
 
-1. **External Navigation Intent**
+1. **[x] External Navigation Intent**
    - Tap on "Navigate" or restaurant map pin dispatches an implicit `geo:` intent or Universal Navigation URI:
      `geo:0,0?q=latitude,longitude(Restaurant+Name)`
    - Hands off turn-by-turn routing directly to the user's default navigation application (Google Maps, OsmAnd, Organic Maps).
 
-2. **Browser & Contact Intents**
+2. **[x] Browser & Contact Intents**
    - Web browser launcher using `Intent.ACTION_VIEW` for venues with web URLs.
    - Dialer launcher using `Intent.ACTION_DIAL` (`tel:$phone`) for venues with listed phone numbers.
 
@@ -98,11 +98,11 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 5: Preferences Persistence & Data Safety
 
-1. **User Preference Persistence**
+1. **[x] User Preference Persistence**
    - Store filter states (e.g., excluding Fast Food, active search radius) using Jetpack DataStore.
    - Remember last selected manual location override when GPS is disabled or inactive.
 
-2. **Data Safety & Backup Strategy (Ecosystem Mandate)**
+2. **[x] Data Safety & Backup Strategy (Ecosystem Mandate)**
    - Implement an automated export/backup and restore procedure for app settings, user preferences, and user database tables (`user_favorites`, notes).
    - Ensure backups are outputted in a portable format (JSON / SQLite export) for easy restoration across app reinstalls or updates.
 
@@ -110,12 +110,12 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 6: Sync Pipeline, Build Automation & CI/CD Integration
 
-1. **OTA Background Refresh / Sync Engine**
+1. **[x] OTA Background Refresh / Sync Engine**
    - Background update task (WorkManager or manual "Check for Updates" action in settings).
    - Fetches updated Overpass bounding-box JSON data.
    - Performs batch `@Upsert` into Room database without disturbing user favorites or preferences.
 
-2. **CI/CD Pipeline (`android_build.yml`)**
+2. **[x] CI/CD Pipeline (`android_build.yml`)**
    - Configured GitHub Actions workflow triggering on non-main branches:
      - Sets up JDK 17 environment (Temurin distribution).
      - Resolves `local.properties` SDK directory.
@@ -124,7 +124,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
      - Uploads debug APK and build log artifacts.
      - Triggers Pushover notifications (`PUSHOVER_APP_TOKEN` and `PUSHOVER_USER_KEY`) with build status and artifact download links.
 
-3. **Sprillex Tools & Universal Update Manager Compatibility**
+3. **[x] Sprillex Tools & Universal Update Manager Compatibility**
    - Maintenance scripts generated via `clone_android.sh` and `init_repo.sh`.
    - Root `update.sh` wrapper integration compatible with `universal_update_manager.sh` (`-m` / `--main`, `-n` / `--newest` flags supported).
 
@@ -132,13 +132,13 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 7: Testing, Verification & Pre-Release Quality Assurance
 
-1. **DAO & Database Verification**
+1. **[x] DAO & Database Verification**
    - Unit tests verifying Room pre-population from asset database `regional_restaurants.db`.
    - Spatial bounding-box query verification and multi-field keyword search tests.
 
-2. **Distance & Location Unit Tests**
+2. **[x] Distance & Location Unit Tests**
    - Unit tests for Haversine distance calculations and candidate sorting algorithms.
 
-3. **UI & Dark Mode Compliance Audit**
+3. **[x] UI & Dark Mode Compliance Audit**
    - Verify dark theme contrast ratios and elevation levels (`#121212`, `#1e1e1e`, `#2d2d2d`).
    - Validate intent handling for navigation, web, and dialer actions.
