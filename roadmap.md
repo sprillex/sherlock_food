@@ -147,22 +147,22 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 8: Future Feature Pipeline & AI Integration
 
-1. **[ ] Restaurants Wishlist ("Restaurants I Want to Try")**
+1. **[x] Restaurants Wishlist ("Restaurants I Want to Try")**
    - Support marking venues as "Want to Try" with custom notes and priority tags.
 
-2. **[ ] Social Sharing (System Share Sheet)**
+2. **[x] Social Sharing (System Share Sheet)**
    - Dispatch Android `ACTION_SEND` intents with formatted text and location links for venue sharing.
 
-3. **[ ] Dynamic Location Awareness & Proximity Sorting**
+3. **[x] Dynamic Location Awareness & Proximity Sorting**
    - Continuous device GPS position monitoring and real-time auto-sorting by distance.
 
 4. **[ ] AI Integration**
    - Intelligent natural language venue search and personalized dining recommendations.
 
-5. **[ ] Favorite Menu Items**
+5. **[x] Favorite Menu Items**
    - Saved personal list of favorite dishes associated with specific restaurants.
 
-6. **[ ] Dish Wishlist ("Items I Want to Try")**
+6. **[x] Dish Wishlist ("Items I Want to Try")**
    - Track specific menu items the user wants to order on future visits.
 
 7. **[ ] Smart Menu Integration**

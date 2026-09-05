@@ -3,12 +3,20 @@ package com.sprillex.restaurantfinder.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
+import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
+import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,11 +31,16 @@ fun RestaurantCard(
     restaurant: Restaurant,
     distanceFormatted: String,
     isFavorite: Boolean,
+    wishlist: Wishlist?,
+    dishes: List<DishWishlist>,
+    favoriteDishes: List<FavoriteDish>,
     onFavoriteToggle: () -> Unit,
+    onWishlistClick: () -> Unit,
     onClick: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
-    onWebsiteClick: () -> Unit
+    onWebsiteClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -59,6 +72,13 @@ fun RestaurantCard(
                             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = "Favorite",
                             tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
+                        )
+                    }
+                    IconButton(onClick = onWishlistClick) {
+                        Icon(
+                            imageVector = if (wishlist != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Wishlist",
+                            tint = if (wishlist != null) MaterialTheme.colorScheme.tertiary else TextSecondary
                         )
                     }
                     Text(
@@ -93,6 +113,57 @@ fun RestaurantCard(
                 )
             }
 
+            if (wishlist != null || dishes.isNotEmpty() || favoriteDishes.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (wishlist != null) {
+                        AssistChip(
+                            onClick = onWishlistClick,
+                            label = {
+                                Text(
+                                    text = "Wishlist [${wishlist.priority}]" + if (wishlist.notes.isNotBlank()) ": ${wishlist.notes}" else "",
+                                    maxLines = 1
+                                )
+                            }
+                        )
+                    }
+                    if (dishes.isNotEmpty()) {
+                        AssistChip(
+                            onClick = onClick,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.RestaurantMenu,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = {
+                                Text(text = "${dishes.size} to try")
+                            }
+                        )
+                    }
+                    if (favoriteDishes.isNotEmpty()) {
+                        AssistChip(
+                            onClick = onClick,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = {
+                                Text(text = "${favoriteDishes.size} fav dish${if (favoriteDishes.size > 1) "es" else ""}")
+                            }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
@@ -124,6 +195,13 @@ fun RestaurantCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+                IconButton(onClick = onShareClick) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

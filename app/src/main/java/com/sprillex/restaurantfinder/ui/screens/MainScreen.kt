@@ -14,55 +14,81 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
+import com.sprillex.restaurantfinder.data.Wishlist
 import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.DistanceCalculator
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.RestaurantCard
+
+fun sortAndFilterRestaurants(
+    restaurants: List<Restaurant>,
+    favoriteIds: Set<Long>,
+    wishlistMap: Map<Long, Wishlist>,
+    searchQuery: String,
+    selectedAmenity: String?,
+    selectedAnchor: AnchorLocation
+): List<Pair<Restaurant, Double>> {
+    return restaurants.filter { r ->
+        val matchesQuery = searchQuery.isEmpty() ||
+                r.name.contains(searchQuery, ignoreCase = true) ||
+                (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
+                (r.city?.contains(searchQuery, ignoreCase = true) == true)
+
+        val matchesCategory = when (selectedAmenity) {
+            "Favorites" -> favoriteIds.contains(r.id)
+            "Wishlist" -> wishlistMap.containsKey(r.id)
+            "All", null -> true
+            else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
+        }
+
+        matchesQuery && matchesCategory
+    }.map { r ->
+        val dist = DistanceCalculator.calculateDistanceMiles(
+            selectedAnchor.latitude, selectedAnchor.longitude,
+            r.latitude, r.longitude
+        )
+        Pair(r, dist)
+    }.sortedBy { it.second }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     restaurants: List<Restaurant>,
     favoriteIds: Set<Long>,
+    wishlistMap: Map<Long, Wishlist>,
+    dishWishlistMap: Map<Long, List<DishWishlist>>,
+    favoriteDishMap: Map<Long, List<FavoriteDish>>,
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
     onFavoriteToggle: (Long) -> Unit,
+    onWishlistClick: (Restaurant) -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onRestaurantClick: (Restaurant) -> Unit,
     onNavigateClick: (Restaurant) -> Unit,
     onCallClick: (Restaurant) -> Unit,
-    onWebsiteClick: (Restaurant) -> Unit
+    onWebsiteClick: (Restaurant) -> Unit,
+    onShareClick: (Restaurant) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedAmenity by remember { mutableStateOf<String?>(null) }
-    var showOnlyFavorites by remember { mutableStateOf(false) }
     var anchorMenuExpanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("All", "Favorites", "restaurant", "fast_food", "cafe", "bar", "pub")
+    val categories = listOf("All", "Favorites", "Wishlist", "restaurant", "fast_food", "cafe", "bar", "pub")
 
-    val filteredRestaurants = remember(restaurants, favoriteIds, searchQuery, selectedAmenity, showOnlyFavorites, selectedAnchor) {
-        restaurants.filter { r ->
-            val matchesQuery = searchQuery.isEmpty() ||
-                    r.name.contains(searchQuery, ignoreCase = true) ||
-                    (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
-                    (r.city?.contains(searchQuery, ignoreCase = true) == true)
-
-            val matchesCategory = when (selectedAmenity) {
-                "Favorites" -> favoriteIds.contains(r.id)
-                "All", null -> true
-                else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
-            }
-
-            matchesQuery && matchesCategory
-        }.map { r ->
-            val dist = DistanceCalculator.calculateDistanceMiles(
-                selectedAnchor.latitude, selectedAnchor.longitude,
-                r.latitude, r.longitude
-            )
-            Pair(r, dist)
-        }.sortedBy { it.second }
+    val filteredRestaurants = remember(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor) {
+        sortAndFilterRestaurants(
+            restaurants = restaurants,
+            favoriteIds = favoriteIds,
+            wishlistMap = wishlistMap,
+            searchQuery = searchQuery,
+            selectedAmenity = selectedAmenity,
+            selectedAnchor = selectedAnchor
+        )
     }
 
     Scaffold(
@@ -149,11 +175,16 @@ fun MainScreen(
                             restaurant = restaurant,
                             distanceFormatted = DistanceCalculator.formatDistance(distMiles),
                             isFavorite = favoriteIds.contains(restaurant.id),
+                            wishlist = wishlistMap[restaurant.id],
+                            dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
+                            favoriteDishes = favoriteDishMap[restaurant.id] ?: emptyList(),
                             onFavoriteToggle = { onFavoriteToggle(restaurant.id) },
+                            onWishlistClick = { onWishlistClick(restaurant) },
                             onClick = { onRestaurantClick(restaurant) },
                             onNavigateClick = { onNavigateClick(restaurant) },
                             onCallClick = { onCallClick(restaurant) },
-                            onWebsiteClick = { onWebsiteClick(restaurant) }
+                            onWebsiteClick = { onWebsiteClick(restaurant) },
+                            onShareClick = { onShareClick(restaurant) }
                         )
                     }
                 }
