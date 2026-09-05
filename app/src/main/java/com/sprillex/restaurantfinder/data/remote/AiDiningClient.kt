@@ -30,9 +30,11 @@ class AiDiningClient(
     companion object {
         private const val TAG = "AiDiningClient"
         private val CANDIDATE_ENDPOINTS = listOf(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
         )
 
         const val SYSTEM_INSTRUCTION =
@@ -197,6 +199,11 @@ class AiDiningClient(
                     putJsonArray("parts") {
                         add(buildJsonObject { put("text", userPrompt) })
                     }
+                })
+            }
+            putJsonArray("tools") {
+                add(buildJsonObject {
+                    putJsonObject("googleSearch") {}
                 })
             }
         }.toString()
