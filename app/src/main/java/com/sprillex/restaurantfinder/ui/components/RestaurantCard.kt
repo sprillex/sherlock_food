@@ -3,6 +3,8 @@ package com.sprillex.restaurantfinder.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -10,6 +12,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
+import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +27,9 @@ fun RestaurantCard(
     restaurant: Restaurant,
     distanceFormatted: String,
     isFavorite: Boolean,
+    wishlist: Wishlist?,
     onFavoriteToggle: () -> Unit,
+    onWishlistClick: () -> Unit,
     onClick: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
@@ -63,6 +68,13 @@ fun RestaurantCard(
                             tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
                         )
                     }
+                    IconButton(onClick = onWishlistClick) {
+                        Icon(
+                            imageVector = if (wishlist != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Wishlist",
+                            tint = if (wishlist != null) MaterialTheme.colorScheme.tertiary else TextSecondary
+                        )
+                    }
                     Text(
                         text = distanceFormatted,
                         style = MaterialTheme.typography.labelLarge,
@@ -93,6 +105,21 @@ fun RestaurantCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
+            }
+
+            if (wishlist != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AssistChip(
+                        onClick = onWishlistClick,
+                        label = {
+                            Text(
+                                text = "Wishlist [${wishlist.priority}]" + if (wishlist.notes.isNotBlank()) ": ${wishlist.notes}" else "",
+                                maxLines = 1
+                            )
+                        }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

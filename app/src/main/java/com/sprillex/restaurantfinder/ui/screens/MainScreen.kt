@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.data.Restaurant
+import com.sprillex.restaurantfinder.data.Wishlist
 import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.DistanceCalculator
 import com.sprillex.restaurantfinder.location.LocationManager
@@ -25,9 +26,11 @@ import com.sprillex.restaurantfinder.ui.components.RestaurantCard
 fun MainScreen(
     restaurants: List<Restaurant>,
     favoriteIds: Set<Long>,
+    wishlistMap: Map<Long, Wishlist>,
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
     onFavoriteToggle: (Long) -> Unit,
+    onWishlistClick: (Restaurant) -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
     onRestaurantClick: (Restaurant) -> Unit,
@@ -38,12 +41,11 @@ fun MainScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedAmenity by remember { mutableStateOf<String?>(null) }
-    var showOnlyFavorites by remember { mutableStateOf(false) }
     var anchorMenuExpanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("All", "Favorites", "restaurant", "fast_food", "cafe", "bar", "pub")
+    val categories = listOf("All", "Favorites", "Wishlist", "restaurant", "fast_food", "cafe", "bar", "pub")
 
-    val filteredRestaurants = remember(restaurants, favoriteIds, searchQuery, selectedAmenity, showOnlyFavorites, selectedAnchor) {
+    val filteredRestaurants = remember(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor) {
         restaurants.filter { r ->
             val matchesQuery = searchQuery.isEmpty() ||
                     r.name.contains(searchQuery, ignoreCase = true) ||
@@ -52,6 +54,7 @@ fun MainScreen(
 
             val matchesCategory = when (selectedAmenity) {
                 "Favorites" -> favoriteIds.contains(r.id)
+                "Wishlist" -> wishlistMap.containsKey(r.id)
                 "All", null -> true
                 else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
             }
@@ -150,7 +153,9 @@ fun MainScreen(
                             restaurant = restaurant,
                             distanceFormatted = DistanceCalculator.formatDistance(distMiles),
                             isFavorite = favoriteIds.contains(restaurant.id),
+                            wishlist = wishlistMap[restaurant.id],
                             onFavoriteToggle = { onFavoriteToggle(restaurant.id) },
+                            onWishlistClick = { onWishlistClick(restaurant) },
                             onClick = { onRestaurantClick(restaurant) },
                             onNavigateClick = { onNavigateClick(restaurant) },
                             onCallClick = { onCallClick(restaurant) },

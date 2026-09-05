@@ -147,7 +147,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 
 ## Phase 8: Future Feature Pipeline & AI Integration
 
-1. **[ ] Restaurants Wishlist ("Restaurants I Want to Try")**
+1. **[x] Restaurants Wishlist ("Restaurants I Want to Try")**
    - Support marking venues as "Want to Try" with custom notes and priority tags.
 
 2. **[x] Social Sharing (System Share Sheet)**

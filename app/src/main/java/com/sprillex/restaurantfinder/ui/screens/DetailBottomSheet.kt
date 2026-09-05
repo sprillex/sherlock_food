@@ -2,6 +2,8 @@ package com.sprillex.restaurantfinder.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
+import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,7 +26,9 @@ import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 fun DetailBottomSheet(
     restaurant: Restaurant,
     isFavorite: Boolean,
+    wishlist: Wishlist?,
     onFavoriteToggle: () -> Unit,
+    onWishlistClick: () -> Unit,
     onDismiss: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
@@ -50,12 +55,21 @@ fun DetailBottomSheet(
                     color = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onFavoriteToggle) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
-                    )
+                Row {
+                    IconButton(onClick = onFavoriteToggle) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.error else TextSecondary
+                        )
+                    }
+                    IconButton(onClick = onWishlistClick) {
+                        Icon(
+                            imageVector = if (wishlist != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = "Wishlist",
+                            tint = if (wishlist != null) MaterialTheme.colorScheme.tertiary else TextSecondary
+                        )
+                    }
                 }
             }
 
@@ -82,6 +96,30 @@ fun DetailBottomSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
+            }
+
+            if (wishlist != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Wishlist Priority: ${wishlist.priority}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        if (wishlist.notes.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Notes: ${wishlist.notes}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
             }
 
             if (!restaurant.phone.isNullOrBlank()) {

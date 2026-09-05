@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import com.sprillex.restaurantfinder.data.*
 import com.sprillex.restaurantfinder.location.LocationManager
+import com.sprillex.restaurantfinder.ui.components.WishlistDialog
 import com.sprillex.restaurantfinder.ui.screens.DetailBottomSheet
 import com.sprillex.restaurantfinder.ui.screens.MainScreen
 import com.sprillex.restaurantfinder.ui.theme.RestaurantFinderTheme
@@ -36,10 +37,15 @@ class MainActivity : ComponentActivity() {
                     val favorites by favoritesFlow.collectAsState(initial = emptyList())
                     val favoriteIds = remember(favorites) { favorites.map { it.restaurantId }.toSet() }
 
+                    val wishlistFlow = remember { userDb.wishlistDao().getAllWishlistItems() }
+                    val wishlistItems by wishlistFlow.collectAsState(initial = emptyList())
+                    val wishlistMap = remember(wishlistItems) { wishlistItems.associateBy { it.restaurantId } }
+
                     var selectedAnchor by remember {
                         mutableStateOf(LocationManager.PRESET_ANCHORS[initialAnchorIndex])
                     }
                     var selectedRestaurantForDetail by remember { mutableStateOf<Restaurant?>(null) }
+                    var selectedRestaurantForWishlist by remember { mutableStateOf<Restaurant?>(null) }
 
                     val toggleFavorite: (Long) -> Unit = { restaurantId ->
                         lifecycleScope.launch {
@@ -54,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     MainScreen(
                         restaurants = restaurants,
                         favoriteIds = favoriteIds,
+                        wishlistMap = wishlistMap,
                         selectedAnchor = selectedAnchor,
                         onAnchorSelected = { anchor ->
                             selectedAnchor = anchor
@@ -63,6 +70,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onFavoriteToggle = toggleFavorite,
+                        onWishlistClick = { selectedRestaurantForWishlist = it },
                         onBackupClick = {
                             lifecycleScope.launch {
                                 val path = BackupManager.exportUserData(applicationContext, userDb)
@@ -88,12 +96,42 @@ class MainActivity : ComponentActivity() {
                         DetailBottomSheet(
                             restaurant = restaurant,
                             isFavorite = favoriteIds.contains(restaurant.id),
+                            wishlist = wishlistMap[restaurant.id],
                             onFavoriteToggle = { toggleFavorite(restaurant.id) },
+                            onWishlistClick = {
+                                selectedRestaurantForWishlist = restaurant
+                            },
                             onDismiss = { selectedRestaurantForDetail = null },
                             onNavigateClick = { IntentHelper.launchNavigation(this, restaurant) },
                             onCallClick = { restaurant.phone?.let { IntentHelper.launchDialer(this, it) } },
                             onWebsiteClick = { restaurant.website?.let { IntentHelper.launchBrowser(this, it) } },
                             onShareClick = { IntentHelper.shareRestaurant(this, restaurant) }
+                        )
+                    }
+
+                    selectedRestaurantForWishlist?.let { restaurant ->
+                        WishlistDialog(
+                            restaurant = restaurant,
+                            currentWishlist = wishlistMap[restaurant.id],
+                            onSave = { notes, priority ->
+                                lifecycleScope.launch {
+                                    userDb.wishlistDao().addOrUpdateWishlist(
+                                        Wishlist(
+                                            restaurantId = restaurant.id,
+                                            notes = notes,
+                                            priority = priority
+                                        )
+                                    )
+                                    selectedRestaurantForWishlist = null
+                                }
+                            },
+                            onDelete = {
+                                lifecycleScope.launch {
+                                    userDb.wishlistDao().removeWishlistByRestaurantId(restaurant.id)
+                                    selectedRestaurantForWishlist = null
+                                }
+                            },
+                            onDismiss = { selectedRestaurantForWishlist = null }
                         )
                     }
                 }
