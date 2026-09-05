@@ -3,6 +3,8 @@ package com.sprillex.restaurantfinder.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Visibility
@@ -17,11 +19,13 @@ import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel2
 import com.sprillex.restaurantfinder.ui.theme.TextPrimary
 import com.sprillex.restaurantfinder.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     currentApiKey: String,
+    onValidateKey: (suspend (String) -> Result<Boolean>)? = null,
     onSaveApiKey: (String) -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
@@ -29,6 +33,32 @@ fun SettingsDialog(
 ) {
     var apiKeyText by remember { mutableStateOf(currentApiKey) }
     var isKeyVisible by remember { mutableStateOf(false) }
+    var isVerifying by remember { mutableStateOf(false) }
+    var validationResult by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    val scope = rememberCoroutineScope()
+
+    val verifyAction: () -> Unit = {
+        if (apiKeyText.isBlank()) {
+            validationResult = false to "API Key cannot be blank."
+        } else if (onValidateKey != null) {
+            isVerifying = true
+            validationResult = null
+            scope.launch {
+                val res = onValidateKey(apiKeyText)
+                isVerifying = false
+                if (res.isSuccess && res.getOrDefault(false)) {
+                    validationResult = true to "Key verified successfully!"
+                    onSaveApiKey(apiKeyText)
+                } else {
+                    val msg = res.exceptionOrNull()?.message ?: "Key validation failed."
+                    validationResult = false to msg
+                }
+            }
+        } else {
+            onSaveApiKey(apiKeyText)
+            validationResult = true to "Saved"
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -76,7 +106,7 @@ fun SettingsDialog(
                     value = apiKeyText,
                     onValueChange = {
                         apiKeyText = it
-                        onSaveApiKey(it)
+                        validationResult = null
                     },
                     label = { Text("API Key") },
                     placeholder = { Text("Enter Gemini API key...") },
@@ -92,6 +122,52 @@ fun SettingsDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = verifyAction,
+                        enabled = !isVerifying && apiKeyText.isNotBlank()
+                    ) {
+                        if (isVerifying) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Verifying...")
+                        } else {
+                            Text("Verify & Save")
+                        }
+                    }
+
+                    if (validationResult != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            val (success, msg) = validationResult!!
+                            Icon(
+                                imageVector = if (success) Icons.Default.CheckCircle else Icons.Default.Error,
+                                contentDescription = null,
+                                tint = if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
                 HorizontalDivider()

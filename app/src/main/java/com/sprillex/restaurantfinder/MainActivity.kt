@@ -60,10 +60,11 @@ class MainActivity : ComponentActivity() {
                     val appDb = remember { AppDatabase.getDatabase(applicationContext) }
                     val userDb = remember { UserDatabase.getDatabase(applicationContext) }
 
+                    val aiClient = remember { AiDiningClient() }
                     val restaurantRepository = remember {
                         RestaurantRepository(
                             appDb.restaurantDetailDao(),
-                            AiDiningClient()
+                            aiClient
                         )
                     }
 
@@ -142,6 +143,7 @@ class MainActivity : ComponentActivity() {
                     if (isSettingsOpen) {
                         SettingsDialog(
                             currentApiKey = userApiKey,
+                            onValidateKey = { key -> aiClient.validateApiKey(key) },
                             onSaveApiKey = { newKey ->
                                 preferenceManager.setGeminiApiKey(newKey)
                                 userApiKey = newKey

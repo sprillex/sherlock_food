@@ -48,6 +48,48 @@ class AiDiningClient(
         try { Log.e(TAG, msg, tr) } catch (_: Throwable) { println("E/$TAG: $msg ${tr?.message}") }
     }
 
+    suspend fun validateApiKey(keyToTest: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        val trimmedKey = keyToTest.trim()
+        if (trimmedKey.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("API Key cannot be blank."))
+        }
+
+        try {
+            val testRequestBody = buildRequestBody("You are a test assistant.", "Respond with OK.")
+            val url = URL("$GEMINI_ENDPOINT_URL?key=$trimmedKey")
+            val connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                doOutput = true
+                connectTimeout = 8000
+                readTimeout = 8000
+            }
+
+            OutputStreamWriter(connection.outputStream, "UTF-8").use { os ->
+                os.write(testRequestBody)
+                os.flush()
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode in 200..299) {
+                val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
+                val text = parseGeminiResponseText(responseText)
+                if (!text.isNullOrBlank()) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("Model returned empty response."))
+                }
+            } else {
+                val errText = connection.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
+                logE("Gemini API Key validation failed with code $responseCode: $errText")
+                Result.failure(Exception("Validation failed (HTTP $responseCode)"))
+            }
+        } catch (e: Exception) {
+            logE("Failed to validate Gemini API Key", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun queryDiningProfile(
         restaurant: Restaurant,
         overrideApiKey: String? = null

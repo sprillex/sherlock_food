@@ -66,4 +66,11 @@ class AiDiningClientTest {
         val result = client.queryDiningProfile(restaurant)
         assertNull(result)
     }
+
+    @Test
+    fun testValidateBlankApiKeyFails() = runBlocking {
+        val client = AiDiningClient(apiKey = "")
+        val result = client.validateApiKey("   ")
+        assertTrue(result.isFailure)
+    }
 }
