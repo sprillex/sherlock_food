@@ -29,8 +29,11 @@ class AiDiningClient(
 ) {
     companion object {
         private const val TAG = "AiDiningClient"
-        private const val GEMINI_ENDPOINT_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        private val CANDIDATE_ENDPOINTS = listOf(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent"
+        )
 
         const val SYSTEM_INSTRUCTION =
             "You are a precise local dining assistant. Your task is to provide accurate, verified profile details for an independent restaurant based on real-world web grounding and local knowledge.\n\n" +
@@ -55,30 +58,16 @@ class AiDiningClient(
         }
 
         try {
-            val testRequestBody = buildRequestBody("You are a test assistant.", "Respond with OK.")
-            val url = URL("$GEMINI_ENDPOINT_URL?key=$trimmedKey")
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models?key=$trimmedKey")
             val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                doOutput = true
+                requestMethod = "GET"
                 connectTimeout = 8000
                 readTimeout = 8000
             }
 
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { os ->
-                os.write(testRequestBody)
-                os.flush()
-            }
-
             val responseCode = connection.responseCode
             if (responseCode in 200..299) {
-                val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-                val text = parseGeminiResponseText(responseText)
-                if (!text.isNullOrBlank()) {
-                    Result.success(true)
-                } else {
-                    Result.failure(Exception("Model returned empty response."))
-                }
+                Result.success(true)
             } else {
                 val errText = connection.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
                 logE("Gemini API Key validation failed with code $responseCode: $errText")
@@ -103,39 +92,39 @@ class AiDiningClient(
             return@withContext null
         }
 
-        try {
-            val userPrompt = buildUserPrompt(restaurant)
-            val jsonRequestBody = buildRequestBody(SYSTEM_INSTRUCTION, userPrompt)
+        val userPrompt = buildUserPrompt(restaurant)
+        val jsonRequestBody = buildRequestBody(SYSTEM_INSTRUCTION, userPrompt)
 
-            val url = URL("$GEMINI_ENDPOINT_URL?key=$effectiveApiKey")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                doOutput = true
-                connectTimeout = 10000
-                readTimeout = 10000
+        for (endpoint in CANDIDATE_ENDPOINTS) {
+            try {
+                val url = URL("$endpoint?key=$effectiveApiKey")
+                val connection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    doOutput = true
+                    connectTimeout = 10000
+                    readTimeout = 10000
+                }
+
+                OutputStreamWriter(connection.outputStream, "UTF-8").use { os ->
+                    os.write(jsonRequestBody)
+                    os.flush()
+                }
+
+                val responseCode = connection.responseCode
+                if (responseCode in 200..299) {
+                    val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
+                    val extractedContent = parseGeminiResponseText(responseText) ?: continue
+                    val cleanJson = sanitizeJsonString(extractedContent)
+                    return@withContext json.decodeFromString<AiDiningResponse>(cleanJson)
+                } else {
+                    logW("Gemini API endpoint $endpoint returned HTTP $responseCode. Trying fallback...")
+                }
+            } catch (e: Exception) {
+                logE("Failed request to Gemini endpoint: $endpoint", e)
             }
-
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { os ->
-                os.write(jsonRequestBody)
-                os.flush()
-            }
-
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                logE("Gemini API HTTP Error responseCode: $responseCode")
-                return@withContext null
-            }
-
-            val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-            val extractedContent = parseGeminiResponseText(responseText) ?: return@withContext null
-            val cleanJson = sanitizeJsonString(extractedContent)
-
-            return@withContext json.decodeFromString<AiDiningResponse>(cleanJson)
-        } catch (e: Exception) {
-            logE("Failed to query Gemini API for restaurant: ${restaurant.name}", e)
-            return@withContext null
         }
+        return@withContext null
     }
 
     fun buildUserPrompt(restaurant: Restaurant): String {
