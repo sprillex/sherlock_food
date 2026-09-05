@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.sprillex.restaurantfinder.data.*
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
+import com.sprillex.restaurantfinder.ui.components.AddFavoriteDishDialog
 import com.sprillex.restaurantfinder.ui.components.WishlistDialog
 import com.sprillex.restaurantfinder.ui.screens.DetailBottomSheet
 import com.sprillex.restaurantfinder.ui.screens.MainScreen
@@ -46,12 +47,17 @@ class MainActivity : ComponentActivity() {
                     val dishWishlistItems by dishWishlistFlow.collectAsState(initial = emptyList())
                     val dishWishlistMap = remember(dishWishlistItems) { dishWishlistItems.groupBy { it.restaurantId } }
 
+                    val favoriteDishFlow = remember { userDb.favoriteDishDao().getAllFavoriteDishes() }
+                    val favoriteDishItems by favoriteDishFlow.collectAsState(initial = emptyList())
+                    val favoriteDishMap = remember(favoriteDishItems) { favoriteDishItems.groupBy { it.restaurantId } }
+
                     var selectedAnchor by remember {
                         mutableStateOf(LocationManager.PRESET_ANCHORS[initialAnchorIndex])
                     }
                     var selectedRestaurantForDetail by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForWishlist by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForAddDish by remember { mutableStateOf<Restaurant?>(null) }
+                    var selectedRestaurantForAddFavDish by remember { mutableStateOf<Restaurant?>(null) }
 
                     val toggleFavorite: (Long) -> Unit = { restaurantId ->
                         lifecycleScope.launch {
@@ -68,6 +74,7 @@ class MainActivity : ComponentActivity() {
                         favoriteIds = favoriteIds,
                         wishlistMap = wishlistMap,
                         dishWishlistMap = dishWishlistMap,
+                        favoriteDishMap = favoriteDishMap,
                         selectedAnchor = selectedAnchor,
                         onAnchorSelected = { anchor ->
                             selectedAnchor = anchor
@@ -105,6 +112,7 @@ class MainActivity : ComponentActivity() {
                             isFavorite = favoriteIds.contains(restaurant.id),
                             wishlist = wishlistMap[restaurant.id],
                             dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
+                            favoriteDishes = favoriteDishMap[restaurant.id] ?: emptyList(),
                             onFavoriteToggle = { toggleFavorite(restaurant.id) },
                             onWishlistClick = {
                                 selectedRestaurantForWishlist = restaurant
@@ -117,11 +125,38 @@ class MainActivity : ComponentActivity() {
                                     userDb.dishWishlistDao().removeDish(dish)
                                 }
                             },
+                            onAddFavoriteDishClick = {
+                                selectedRestaurantForAddFavDish = restaurant
+                            },
+                            onDeleteFavoriteDishClick = { favDish ->
+                                lifecycleScope.launch {
+                                    userDb.favoriteDishDao().removeFavoriteDish(favDish)
+                                }
+                            },
                             onDismiss = { selectedRestaurantForDetail = null },
                             onNavigateClick = { IntentHelper.launchNavigation(this, restaurant) },
                             onCallClick = { restaurant.phone?.let { IntentHelper.launchDialer(this, it) } },
                             onWebsiteClick = { restaurant.website?.let { IntentHelper.launchBrowser(this, it) } },
                             onShareClick = { IntentHelper.shareRestaurant(this, restaurant) }
+                        )
+                    }
+
+                    selectedRestaurantForAddFavDish?.let { restaurant ->
+                        AddFavoriteDishDialog(
+                            restaurant = restaurant,
+                            onSave = { dishName, notes ->
+                                lifecycleScope.launch {
+                                    userDb.favoriteDishDao().addOrUpdateFavoriteDish(
+                                        FavoriteDish(
+                                            restaurantId = restaurant.id,
+                                            dishName = dishName,
+                                            notes = notes
+                                        )
+                                    )
+                                    selectedRestaurantForAddFavDish = null
+                                }
+                            },
+                            onDismiss = { selectedRestaurantForAddFavDish = null }
                         )
                     }
 

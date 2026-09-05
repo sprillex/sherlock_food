@@ -159,7 +159,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 4. **[ ] AI Integration**
    - Intelligent natural language venue search and personalized dining recommendations.
 
-5. **[ ] Favorite Menu Items**
+5. **[x] Favorite Menu Items**
    - Saved personal list of favorite dishes associated with specific restaurants.
 
 6. **[x] Dish Wishlist ("Items I Want to Try")**

@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
 import com.sprillex.restaurantfinder.data.Wishlist
 import com.sprillex.restaurantfinder.location.AnchorLocation
@@ -29,6 +30,7 @@ fun MainScreen(
     favoriteIds: Set<Long>,
     wishlistMap: Map<Long, Wishlist>,
     dishWishlistMap: Map<Long, List<DishWishlist>>,
+    favoriteDishMap: Map<Long, List<FavoriteDish>>,
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
     onFavoriteToggle: (Long) -> Unit,
@@ -157,6 +159,7 @@ fun MainScreen(
                             isFavorite = favoriteIds.contains(restaurant.id),
                             wishlist = wishlistMap[restaurant.id],
                             dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
+                            favoriteDishes = favoriteDishMap[restaurant.id] ?: emptyList(),
                             onFavoriteToggle = { onFavoriteToggle(restaurant.id) },
                             onWishlistClick = { onWishlistClick(restaurant) },
                             onClick = { onRestaurantClick(restaurant) },

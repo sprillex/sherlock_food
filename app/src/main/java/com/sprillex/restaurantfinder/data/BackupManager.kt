@@ -9,6 +9,7 @@ object BackupManager {
         val favorites = userDatabase.favoriteDao().getAllFavorites().first()
         val wishlist = userDatabase.wishlistDao().getAllWishlistItems().first()
         val dishes = userDatabase.dishWishlistDao().getAllDishWishlistItems().first()
+        val favoriteDishes = userDatabase.favoriteDishDao().getAllFavoriteDishes().first()
         val preferenceManager = PreferenceManager(context)
         val selectedAnchorIndex = preferenceManager.getSelectedAnchorIndex()
 
@@ -36,6 +37,15 @@ object BackupManager {
             val safeNotes = dish.notes.replace("\"", "\\\"")
             json.append("    {\"restaurantId\": ${dish.restaurantId}, \"dishName\": \"$safeName\", \"notes\": \"$safeNotes\", \"addedAt\": ${dish.addedAt}}")
             if (index < dishes.size - 1) json.append(",")
+            json.append("\n")
+        }
+        json.append("  ],\n")
+        json.append("  \"favoriteDishes\": [\n")
+        favoriteDishes.forEachIndexed { index, favDish ->
+            val safeName = favDish.dishName.replace("\"", "\\\"")
+            val safeNotes = favDish.notes.replace("\"", "\\\"")
+            json.append("    {\"restaurantId\": ${favDish.restaurantId}, \"dishName\": \"$safeName\", \"notes\": \"$safeNotes\", \"addedAt\": ${favDish.addedAt}}")
+            if (index < favoriteDishes.size - 1) json.append(",")
             json.append("\n")
         }
         json.append("  ]\n")
@@ -84,22 +94,47 @@ object BackupManager {
             }
         }
 
-        val dishRegex = "\\{\"restaurantId\":\\s*(\\d+),\\s*\"dishName\":\\s*\"(.*?)\",\\s*\"notes\":\\s*\"(.*?)\",\\s*\"addedAt\":\\s*(\\d+)\\}".toRegex()
-        val dishMatches = dishRegex.findAll(content)
-        for (match in dishMatches) {
-            val resId = match.groupValues[1].toLongOrNull()
-            val dishName = match.groupValues[2]
-            val notes = match.groupValues[3]
-            val addedAt = match.groupValues[4].toLongOrNull()
-            if (resId != null && addedAt != null) {
-                userDatabase.dishWishlistDao().addOrUpdateDish(
-                    DishWishlist(
-                        restaurantId = resId,
-                        dishName = dishName,
-                        notes = notes,
-                        addedAt = addedAt
+        val itemRegex = "\\{\"restaurantId\":\\s*(\\d+),\\s*\"dishName\":\\s*\"(.*?)\",\\s*\"notes\":\\s*\"(.*?)\",\\s*\"addedAt\":\\s*(\\d+)\\}".toRegex()
+
+        if (content.contains("\"dishWishlist\"")) {
+            val dishSection = content.substringAfter("\"dishWishlist\"").substringBefore("\"favoriteDishes\"")
+            val dishMatches = itemRegex.findAll(dishSection)
+            for (match in dishMatches) {
+                val resId = match.groupValues[1].toLongOrNull()
+                val dishName = match.groupValues[2]
+                val notes = match.groupValues[3]
+                val addedAt = match.groupValues[4].toLongOrNull()
+                if (resId != null && addedAt != null) {
+                    userDatabase.dishWishlistDao().addOrUpdateDish(
+                        DishWishlist(
+                            restaurantId = resId,
+                            dishName = dishName,
+                            notes = notes,
+                            addedAt = addedAt
+                        )
                     )
-                )
+                }
+            }
+        }
+
+        if (content.contains("\"favoriteDishes\"")) {
+            val favDishSection = content.substringAfter("\"favoriteDishes\"")
+            val favDishMatches = itemRegex.findAll(favDishSection)
+            for (match in favDishMatches) {
+                val resId = match.groupValues[1].toLongOrNull()
+                val dishName = match.groupValues[2]
+                val notes = match.groupValues[3]
+                val addedAt = match.groupValues[4].toLongOrNull()
+                if (resId != null && addedAt != null) {
+                    userDatabase.favoriteDishDao().addOrUpdateFavoriteDish(
+                        FavoriteDish(
+                            restaurantId = resId,
+                            dishName = dishName,
+                            notes = notes,
+                            addedAt = addedAt
+                        )
+                    )
+                }
             }
         }
         return true

@@ -13,8 +13,10 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,10 +34,13 @@ fun DetailBottomSheet(
     isFavorite: Boolean,
     wishlist: Wishlist?,
     dishes: List<DishWishlist>,
+    favoriteDishes: List<FavoriteDish>,
     onFavoriteToggle: () -> Unit,
     onWishlistClick: () -> Unit,
     onAddDishClick: () -> Unit,
     onDeleteDishClick: (DishWishlist) -> Unit,
+    onAddFavoriteDishClick: () -> Unit,
+    onDeleteFavoriteDishClick: (FavoriteDish) -> Unit,
     onDismiss: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
@@ -106,9 +111,95 @@ fun DetailBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Divider()
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Favorite Dishes Section
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Favorite Menu Items (${favoriteDishes.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                }
+                IconButton(onClick = onAddFavoriteDishClick) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Favorite Dish",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            if (favoriteDishes.isEmpty()) {
+                Text(
+                    text = "No favorite menu items added yet. Tap '+' to add your go-to dishes!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    favoriteDishes.forEach { favDish ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = favDish.dishName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = TextPrimary
+                                    )
+                                    if (favDish.notes.isNotBlank()) {
+                                        Text(
+                                            text = favDish.notes,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = { onDeleteFavoriteDishClick(favDish) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete Favorite Dish",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Dishes to try Section
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

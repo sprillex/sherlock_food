@@ -12,8 +12,10 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ fun RestaurantCard(
     isFavorite: Boolean,
     wishlist: Wishlist?,
     dishes: List<DishWishlist>,
+    favoriteDishes: List<FavoriteDish>,
     onFavoriteToggle: () -> Unit,
     onWishlistClick: () -> Unit,
     onClick: () -> Unit,
@@ -110,7 +113,7 @@ fun RestaurantCard(
                 )
             }
 
-            if (wishlist != null || dishes.isNotEmpty()) {
+            if (wishlist != null || dishes.isNotEmpty() || favoriteDishes.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -138,7 +141,23 @@ fun RestaurantCard(
                                 )
                             },
                             label = {
-                                Text(text = "${dishes.size} dish${if (dishes.size > 1) "es" else ""} to try")
+                                Text(text = "${dishes.size} to try")
+                            }
+                        )
+                    }
+                    if (favoriteDishes.isNotEmpty()) {
+                        AssistChip(
+                            onClick = onClick,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = {
+                                Text(text = "${favoriteDishes.size} fav dish${if (favoriteDishes.size > 1) "es" else ""}")
                             }
                         )
                     }
