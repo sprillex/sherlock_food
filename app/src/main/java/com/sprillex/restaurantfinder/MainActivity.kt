@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import com.sprillex.restaurantfinder.data.*
 import com.sprillex.restaurantfinder.location.LocationManager
+import com.sprillex.restaurantfinder.ui.components.AddDishDialog
 import com.sprillex.restaurantfinder.ui.components.WishlistDialog
 import com.sprillex.restaurantfinder.ui.screens.DetailBottomSheet
 import com.sprillex.restaurantfinder.ui.screens.MainScreen
@@ -41,11 +42,16 @@ class MainActivity : ComponentActivity() {
                     val wishlistItems by wishlistFlow.collectAsState(initial = emptyList())
                     val wishlistMap = remember(wishlistItems) { wishlistItems.associateBy { it.restaurantId } }
 
+                    val dishWishlistFlow = remember { userDb.dishWishlistDao().getAllDishWishlistItems() }
+                    val dishWishlistItems by dishWishlistFlow.collectAsState(initial = emptyList())
+                    val dishWishlistMap = remember(dishWishlistItems) { dishWishlistItems.groupBy { it.restaurantId } }
+
                     var selectedAnchor by remember {
                         mutableStateOf(LocationManager.PRESET_ANCHORS[initialAnchorIndex])
                     }
                     var selectedRestaurantForDetail by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForWishlist by remember { mutableStateOf<Restaurant?>(null) }
+                    var selectedRestaurantForAddDish by remember { mutableStateOf<Restaurant?>(null) }
 
                     val toggleFavorite: (Long) -> Unit = { restaurantId ->
                         lifecycleScope.launch {
@@ -61,6 +67,7 @@ class MainActivity : ComponentActivity() {
                         restaurants = restaurants,
                         favoriteIds = favoriteIds,
                         wishlistMap = wishlistMap,
+                        dishWishlistMap = dishWishlistMap,
                         selectedAnchor = selectedAnchor,
                         onAnchorSelected = { anchor ->
                             selectedAnchor = anchor
@@ -97,15 +104,43 @@ class MainActivity : ComponentActivity() {
                             restaurant = restaurant,
                             isFavorite = favoriteIds.contains(restaurant.id),
                             wishlist = wishlistMap[restaurant.id],
+                            dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
                             onFavoriteToggle = { toggleFavorite(restaurant.id) },
                             onWishlistClick = {
                                 selectedRestaurantForWishlist = restaurant
+                            },
+                            onAddDishClick = {
+                                selectedRestaurantForAddDish = restaurant
+                            },
+                            onDeleteDishClick = { dish ->
+                                lifecycleScope.launch {
+                                    userDb.dishWishlistDao().removeDish(dish)
+                                }
                             },
                             onDismiss = { selectedRestaurantForDetail = null },
                             onNavigateClick = { IntentHelper.launchNavigation(this, restaurant) },
                             onCallClick = { restaurant.phone?.let { IntentHelper.launchDialer(this, it) } },
                             onWebsiteClick = { restaurant.website?.let { IntentHelper.launchBrowser(this, it) } },
                             onShareClick = { IntentHelper.shareRestaurant(this, restaurant) }
+                        )
+                    }
+
+                    selectedRestaurantForAddDish?.let { restaurant ->
+                        AddDishDialog(
+                            restaurant = restaurant,
+                            onSave = { dishName, notes ->
+                                lifecycleScope.launch {
+                                    userDb.dishWishlistDao().addOrUpdateDish(
+                                        DishWishlist(
+                                            restaurantId = restaurant.id,
+                                            dishName = dishName,
+                                            notes = notes
+                                        )
+                                    )
+                                    selectedRestaurantForAddDish = null
+                                }
+                            },
+                            onDismiss = { selectedRestaurantForAddDish = null }
                         )
                     }
 

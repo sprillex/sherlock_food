@@ -8,6 +8,7 @@ object BackupManager {
     suspend fun exportUserData(context: Context, userDatabase: UserDatabase): String {
         val favorites = userDatabase.favoriteDao().getAllFavorites().first()
         val wishlist = userDatabase.wishlistDao().getAllWishlistItems().first()
+        val dishes = userDatabase.dishWishlistDao().getAllDishWishlistItems().first()
         val preferenceManager = PreferenceManager(context)
         val selectedAnchorIndex = preferenceManager.getSelectedAnchorIndex()
 
@@ -26,6 +27,15 @@ object BackupManager {
             val safeNotes = item.notes.replace("\"", "\\\"")
             json.append("    {\"restaurantId\": ${item.restaurantId}, \"notes\": \"$safeNotes\", \"priority\": \"${item.priority}\", \"addedAt\": ${item.addedAt}}")
             if (index < wishlist.size - 1) json.append(",")
+            json.append("\n")
+        }
+        json.append("  ],\n")
+        json.append("  \"dishWishlist\": [\n")
+        dishes.forEachIndexed { index, dish ->
+            val safeName = dish.dishName.replace("\"", "\\\"")
+            val safeNotes = dish.notes.replace("\"", "\\\"")
+            json.append("    {\"restaurantId\": ${dish.restaurantId}, \"dishName\": \"$safeName\", \"notes\": \"$safeNotes\", \"addedAt\": ${dish.addedAt}}")
+            if (index < dishes.size - 1) json.append(",")
             json.append("\n")
         }
         json.append("  ]\n")
@@ -68,6 +78,25 @@ object BackupManager {
                         restaurantId = resId,
                         notes = notes,
                         priority = priority,
+                        addedAt = addedAt
+                    )
+                )
+            }
+        }
+
+        val dishRegex = "\\{\"restaurantId\":\\s*(\\d+),\\s*\"dishName\":\\s*\"(.*?)\",\\s*\"notes\":\\s*\"(.*?)\",\\s*\"addedAt\":\\s*(\\d+)\\}".toRegex()
+        val dishMatches = dishRegex.findAll(content)
+        for (match in dishMatches) {
+            val resId = match.groupValues[1].toLongOrNull()
+            val dishName = match.groupValues[2]
+            val notes = match.groupValues[3]
+            val addedAt = match.groupValues[4].toLongOrNull()
+            if (resId != null && addedAt != null) {
+                userDatabase.dishWishlistDao().addOrUpdateDish(
+                    DishWishlist(
+                        restaurantId = resId,
+                        dishName = dishName,
+                        notes = notes,
                         addedAt = addedAt
                     )
                 )

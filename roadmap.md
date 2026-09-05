@@ -162,7 +162,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 5. **[ ] Favorite Menu Items**
    - Saved personal list of favorite dishes associated with specific restaurants.
 
-6. **[ ] Dish Wishlist ("Items I Want to Try")**
+6. **[x] Dish Wishlist ("Items I Want to Try")**
    - Track specific menu items the user wants to order on future visits.
 
 7. **[ ] Smart Menu Integration**

@@ -10,8 +10,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
+import com.sprillex.restaurantfinder.data.DishWishlist
 import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,6 +30,7 @@ fun RestaurantCard(
     distanceFormatted: String,
     isFavorite: Boolean,
     wishlist: Wishlist?,
+    dishes: List<DishWishlist>,
     onFavoriteToggle: () -> Unit,
     onWishlistClick: () -> Unit,
     onClick: () -> Unit,
@@ -107,18 +110,38 @@ fun RestaurantCard(
                 )
             }
 
-            if (wishlist != null) {
+            if (wishlist != null || dishes.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AssistChip(
-                        onClick = onWishlistClick,
-                        label = {
-                            Text(
-                                text = "Wishlist [${wishlist.priority}]" + if (wishlist.notes.isNotBlank()) ": ${wishlist.notes}" else "",
-                                maxLines = 1
-                            )
-                        }
-                    )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (wishlist != null) {
+                        AssistChip(
+                            onClick = onWishlistClick,
+                            label = {
+                                Text(
+                                    text = "Wishlist [${wishlist.priority}]" + if (wishlist.notes.isNotBlank()) ": ${wishlist.notes}" else "",
+                                    maxLines = 1
+                                )
+                            }
+                        )
+                    }
+                    if (dishes.isNotEmpty()) {
+                        AssistChip(
+                            onClick = onClick,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.RestaurantMenu,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            label = {
+                                Text(text = "${dishes.size} dish${if (dishes.size > 1) "es" else ""} to try")
+                            }
+                        )
+                    }
                 }
             }
 
