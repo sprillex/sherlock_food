@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.*
 import com.sprillex.restaurantfinder.data.*
+import com.sprillex.restaurantfinder.data.remote.AiDiningClient
+import com.sprillex.restaurantfinder.data.repository.RestaurantRepository
 import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
@@ -54,6 +56,13 @@ class MainActivity : ComponentActivity() {
                 Surface {
                     val appDb = remember { AppDatabase.getDatabase(applicationContext) }
                     val userDb = remember { UserDatabase.getDatabase(applicationContext) }
+
+                    val restaurantRepository = remember {
+                        RestaurantRepository(
+                            appDb.restaurantDetailDao(),
+                            AiDiningClient()
+                        )
+                    }
 
                     val restaurantsFlow = remember { appDb.restaurantDao().getAllRestaurants() }
                     val restaurants by restaurantsFlow.collectAsState(initial = emptyList())
@@ -141,8 +150,28 @@ class MainActivity : ComponentActivity() {
                     )
 
                     selectedRestaurantForDetail?.let { restaurant ->
+                        val restaurantWithDetailsFlow = remember(restaurant.id) {
+                            restaurantRepository.observeRestaurant(restaurant.id)
+                        }
+                        val restaurantWithDetails by restaurantWithDetailsFlow.collectAsState(initial = null)
+                        var isLoadingEnrichment by remember(restaurant.id) { mutableStateOf(false) }
+
                         DetailBottomSheet(
                             restaurant = restaurant,
+                            details = restaurantWithDetails?.details,
+                            isLoadingEnrichment = isLoadingEnrichment,
+                            onEnrich = {
+                                if (restaurantWithDetails?.details == null && !isLoadingEnrichment) {
+                                    isLoadingEnrichment = true
+                                    lifecycleScope.launch {
+                                        try {
+                                            restaurantRepository.ensureDetailsEnriched(restaurant)
+                                        } finally {
+                                            isLoadingEnrichment = false
+                                        }
+                                    }
+                                }
+                            },
                             isFavorite = favoriteIds.contains(restaurant.id),
                             wishlist = wishlistMap[restaurant.id],
                             dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
