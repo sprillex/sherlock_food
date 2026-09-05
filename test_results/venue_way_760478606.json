@@ -1,0 +1,112 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "```json\n{\n  \"found\": true,\n  \"editorial_summary\": \"Rosie's Italian Grille is a long-standing, family-owned Italian restaurant in Toledo, Ohio, offering authentic Italian cuisine in a cozy, Tuscan-themed atmosphere with a picturesque patio.\",\n  \"signature_items\": [\n    \"Lasagna\",\n    \"Veal Parmesan\",\n    \"Tiramisu\"\n  ],\n  \"price_tier\": \"$$\",\n  \"vibe_tags\": [\n    \"italian\",\n    \"casual\",\n    \"romantic\",\n    \"family-friendly\"\n  ],\n  \"service_model\": \"full_table_service\",\n  \"parking\": \"dedicated_lot\",\n  \"outdoor_patio\": \"yes\",\n  \"good_to_know\": \"Reservations are recommended on weekends.\"\n}\n```"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "groundingMetadata": {
+        "searchEntryPoint": {
+          "renderedContent": "\u003cstyle\u003e\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n\u003c/style\u003e\n\u003cdiv class=\"container\"\u003e\n  \u003cdiv class=\"headline\"\u003e\n    \u003csvg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003csvg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\"\u003e\n      \u003ccircle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/\u003e\n      \u003cpath d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/\u003e\n      \u003cpath d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/\u003e\n      \u003cpath d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/\u003e\n      \u003cpath d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/\u003e\n    \u003c/svg\u003e\n    \u003cdiv class=\"gradient-container\"\u003e\u003cdiv class=\"gradient\"\u003e\u003c/div\u003e\u003c/div\u003e\n  \u003c/div\u003e\n  \u003cdiv class=\"carousel\"\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFS3DfdJzGy46Ya5t7-wjrH7mH9bwV7sF0WFJlozVMYND_pDAfJOSx-ejltVeFZ81vl3DgW7amI5ZkK266TWZjx8-w0ktVfxGphNrkuwOHPoKcnIsPHGaQ5hL3leHkMYd5qMqDkF9eY4cu7v2Vt338sk_E0K1NJYdPwZSpDtHcqjcRRiMksur2fks9cE8a5ZOGmWSKTUsFYjVvcMZiYmiOv\"\u003eRosie&#39;s kitchen Toledo Ohio\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE9KAnswNpNAL0ZMV-fqWYapXW0HF1oYP0Vhbkwow9gnsK6kCB7k6AjcZUDfMJAmnz3WntGY2Mcc2FGMPJD3Kuafi2Jbcw3sfst4E6ju-_0i5SnnA9Es_3n-_aZF_kcOAabMWHDInabnnhfXeSJR8ZktZkh3vnvmXaW18FUh8NiHOm_ulyW0IkwvLVcXWlQtViJKKlT_h9Wtbw3Wulcps8g1pgg\"\u003eRosie&#39;s restaurant Toledo Ohio\u003c/a\u003e\n    \u003ca class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEa-lqqamzt5zoIQlkcubAS_GMMgGjtEwrQWVBP7NegJbQ-GNkbjuf0XOhxDNe30c-Ec3mbU6q2OdcKYrWhJ1fbmbsDGpZRJbzMno-BH79S43xEQiUKBW5tmluMOzDtA1LQLK5cX6vrNwIoHK8PNQ6kShFQey2yz7Sjokqt4i8e5PXmqzImbwFyoDNxQRIoFj5WKHdgnxlBWrGj1zazSemqZkKUEalebg==\"\u003eRosie&#39;s Italian Grille Toledo Ohio\u003c/a\u003e\n  \u003c/div\u003e\n\u003c/div\u003e\n"
+        },
+        "groundingChunks": [
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZSVH_Uhn7VAgD6CVcaOSgo7DOrjfYV3CwypLoI0sLA9AYSUEjbRMUOG-SmJeze1ctSFPVcxy85MgJsbGDhYR0W_wfdE0xokKDursdwiTimHfNkpYdWA2cTtvmlXzZdOONs4apiM3CLsZT",
+              "title": "res-discover.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgtg4HwKQ7QZ1S8vjeFEGFmTnQXk0ywrnYaaxOZ4S7pjjp8_S2vuwinoPCxGmv1fawNpWJYHph027mY37B8nK6MsuRnoQQezwFuCpqI_q7wNiM2y7GNVRcy1u-TW78pPtPLaSpXCGH3A0k1bCaLm3xPrGVk1g=",
+              "title": "dinerscoupon.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEO-46kceTROMp85WNrlbq0k9pnyJjS3riFZbMvo-I_II7mvNcC5Swhoo95m5fRrgZ0MxMml_gzxC8aa6Wjd7_PkdcOsYPinPkimo9Glg-eUVNgaoG60WItivwE",
+              "title": "rosiesitaliangrille.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnjp7eg2MdIP7C17W6ymmnJIwxlHZAOogSUjCPUXXl4QtWmAcekCvTUkq6ksjPkfqN9i4b7dIrV1OWfO7ZtAT4GeuTy3bJN7Dt-OYCkLKVaKjDMMFS-Q1-w4hF8CRj12RSCzqC-eL7OVc5kbHvYm4lFSfHaQzCKihJvf-zN7LqSfZWUwDhzExeZk57_5tj5f_rfA1_y6lzRY6OYzUqx-zcoZL0lLCpyunC1uUNZZMxg8ZpRwppv1Zo9Nux8zHsVPMWsyuZzqpFpWA8qFylTlPn1XEw8kuUbq3t4MeV0AWsVPOceycIMmaA3A==",
+              "title": "toledoblade.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQhOHt-OQyhAphS0jg4bbUAYw1nHJft5gedTWTwUadiGkrOdLACEwllIutrvjZREMlwL0XTBiVs3Fiu9k6-NH2OCRPb1CtXr8h5L-EEKhyRdcOVgU5VZ1-ogy2itbKbw_vf0a-WA1XBWU-qKHpSVePSdIrFr9mFOB_8A==",
+              "title": "toledoparent.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHkGe-TGqFrrkIvXEY-NbF3zjIvTAVFxoeKQFqQEVJAy7N54reN9hQQE8RKVD78OfeSiG9Cu9dSvLPTiGYUoEPo_vGmoo1Szv8v6Cs7Z3Z-Ahud1i8lDoDet3BaqnKmuJGMttOP",
+              "title": "rosiesitaliangrille.com"
+            }
+          }
+        ],
+        "groundingSupports": [
+          {
+            "segment": {
+              "endIndex": 239,
+              "text": "```json\n{\n  \"found\": true,\n  \"editorial_summary\": \"Rosie's Italian Grille is a long-standing, family-owned Italian restaurant in Toledo, Ohio, offering authentic Italian cuisine in a cozy, Tuscan-themed atmosphere with a picturesque patio."
+            },
+            "groundingChunkIndices": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "segment": {
+              "startIndex": 239,
+              "endIndex": 589,
+              "text": "\",\n  \"signature_items\": [\n    \"Lasagna\",\n    \"Veal Parmesan\",\n    \"Tiramisu\"\n  ],\n  \"price_tier\": \"$$\",\n  \"vibe_tags\": [\n    \"italian\",\n    \"casual\",\n    \"romantic\",\n    \"family-friendly\"\n  ],\n  \"service_model\": \"full_table_service\",\n  \"parking\": \"dedicated_lot\",\n  \"outdoor_patio\": \"yes\",\n  \"good_to_know\": \"Reservations are recommended on weekends."
+            },
+            "groundingChunkIndices": [
+              4
+            ]
+          }
+        ],
+        "webSearchQueries": [
+          "Rosie's restaurant Toledo Ohio",
+          "Rosie's Italian Grille Toledo Ohio",
+          "Rosie's kitchen Toledo Ohio"
+        ]
+      }
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 407,
+    "candidatesTokenCount": 227,
+    "totalTokenCount": 2683,
+    "promptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 407
+      }
+    ],
+    "toolUsePromptTokenCount": 687,
+    "toolUsePromptTokensDetails": [
+      {
+        "modality": "TEXT",
+        "tokenCount": 687
+      }
+    ],
+    "thoughtsTokenCount": 1362,
+    "serviceTier": "standard"
+  },
+  "modelVersion": "gemini-2.5-flash",
+  "responseId": "S4icasTzJt_VjMcPop_iqQQ"
+}
