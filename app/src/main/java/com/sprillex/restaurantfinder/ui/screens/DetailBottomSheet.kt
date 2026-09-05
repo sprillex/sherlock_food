@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,7 +27,8 @@ fun DetailBottomSheet(
     onDismiss: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
-    onWebsiteClick: () -> Unit
+    onWebsiteClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -117,6 +119,12 @@ fun DetailBottomSheet(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Website")
                     }
+                }
+
+                OutlinedButton(onClick = onShareClick) {
+                    Icon(Icons.Default.Share, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Share")
                 }
             }
         }

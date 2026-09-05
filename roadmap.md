@@ -150,7 +150,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 1. **[ ] Restaurants Wishlist ("Restaurants I Want to Try")**
    - Support marking venues as "Want to Try" with custom notes and priority tags.
 
-2. **[ ] Social Sharing (System Share Sheet)**
+2. **[x] Social Sharing (System Share Sheet)**
    - Dispatch Android `ACTION_SEND` intents with formatted text and location links for venue sharing.
 
 3. **[ ] Dynamic Location Awareness & Proximity Sorting**

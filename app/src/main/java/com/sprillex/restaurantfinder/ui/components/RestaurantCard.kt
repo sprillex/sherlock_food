@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +28,8 @@ fun RestaurantCard(
     onClick: () -> Unit,
     onNavigateClick: () -> Unit,
     onCallClick: () -> Unit,
-    onWebsiteClick: () -> Unit
+    onWebsiteClick: () -> Unit,
+    onShareClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -124,6 +126,13 @@ fun RestaurantCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                }
+                IconButton(onClick = onShareClick) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }

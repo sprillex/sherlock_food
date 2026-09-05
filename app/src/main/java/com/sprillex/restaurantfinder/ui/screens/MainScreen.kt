@@ -33,7 +33,8 @@ fun MainScreen(
     onRestaurantClick: (Restaurant) -> Unit,
     onNavigateClick: (Restaurant) -> Unit,
     onCallClick: (Restaurant) -> Unit,
-    onWebsiteClick: (Restaurant) -> Unit
+    onWebsiteClick: (Restaurant) -> Unit,
+    onShareClick: (Restaurant) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedAmenity by remember { mutableStateOf<String?>(null) }
@@ -153,7 +154,8 @@ fun MainScreen(
                             onClick = { onRestaurantClick(restaurant) },
                             onNavigateClick = { onNavigateClick(restaurant) },
                             onCallClick = { onCallClick(restaurant) },
-                            onWebsiteClick = { onWebsiteClick(restaurant) }
+                            onWebsiteClick = { onWebsiteClick(restaurant) },
+                            onShareClick = { onShareClick(restaurant) }
                         )
                     }
                 }

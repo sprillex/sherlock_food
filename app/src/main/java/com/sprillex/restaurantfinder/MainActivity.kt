@@ -80,7 +80,8 @@ class MainActivity : ComponentActivity() {
                         onRestaurantClick = { selectedRestaurantForDetail = it },
                         onNavigateClick = { IntentHelper.launchNavigation(this, it) },
                         onCallClick = { r -> r.phone?.let { IntentHelper.launchDialer(this, it) } },
-                        onWebsiteClick = { r -> r.website?.let { IntentHelper.launchBrowser(this, it) } }
+                        onWebsiteClick = { r -> r.website?.let { IntentHelper.launchBrowser(this, it) } },
+                        onShareClick = { IntentHelper.shareRestaurant(this, it) }
                     )
 
                     selectedRestaurantForDetail?.let { restaurant ->
@@ -91,7 +92,8 @@ class MainActivity : ComponentActivity() {
                             onDismiss = { selectedRestaurantForDetail = null },
                             onNavigateClick = { IntentHelper.launchNavigation(this, restaurant) },
                             onCallClick = { restaurant.phone?.let { IntentHelper.launchDialer(this, it) } },
-                            onWebsiteClick = { restaurant.website?.let { IntentHelper.launchBrowser(this, it) } }
+                            onWebsiteClick = { restaurant.website?.let { IntentHelper.launchBrowser(this, it) } },
+                            onShareClick = { IntentHelper.shareRestaurant(this, restaurant) }
                         )
                     }
                 }
