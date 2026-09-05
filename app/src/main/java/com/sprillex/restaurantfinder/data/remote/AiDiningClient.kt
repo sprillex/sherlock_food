@@ -201,6 +201,11 @@ class AiDiningClient(
                     }
                 })
             }
+            putJsonArray("tools") {
+                add(buildJsonObject {
+                    putJsonObject("googleSearch") {}
+                })
+            }
         }.toString()
     }
 
