@@ -23,6 +23,37 @@ import com.sprillex.restaurantfinder.location.DistanceCalculator
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.RestaurantCard
 
+fun sortAndFilterRestaurants(
+    restaurants: List<Restaurant>,
+    favoriteIds: Set<Long>,
+    wishlistMap: Map<Long, Wishlist>,
+    searchQuery: String,
+    selectedAmenity: String?,
+    selectedAnchor: AnchorLocation
+): List<Pair<Restaurant, Double>> {
+    return restaurants.filter { r ->
+        val matchesQuery = searchQuery.isEmpty() ||
+                r.name.contains(searchQuery, ignoreCase = true) ||
+                (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
+                (r.city?.contains(searchQuery, ignoreCase = true) == true)
+
+        val matchesCategory = when (selectedAmenity) {
+            "Favorites" -> favoriteIds.contains(r.id)
+            "Wishlist" -> wishlistMap.containsKey(r.id)
+            "All", null -> true
+            else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
+        }
+
+        matchesQuery && matchesCategory
+    }.map { r ->
+        val dist = DistanceCalculator.calculateDistanceMiles(
+            selectedAnchor.latitude, selectedAnchor.longitude,
+            r.latitude, r.longitude
+        )
+        Pair(r, dist)
+    }.sortedBy { it.second }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -50,27 +81,14 @@ fun MainScreen(
     val categories = listOf("All", "Favorites", "Wishlist", "restaurant", "fast_food", "cafe", "bar", "pub")
 
     val filteredRestaurants = remember(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor) {
-        restaurants.filter { r ->
-            val matchesQuery = searchQuery.isEmpty() ||
-                    r.name.contains(searchQuery, ignoreCase = true) ||
-                    (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
-                    (r.city?.contains(searchQuery, ignoreCase = true) == true)
-
-            val matchesCategory = when (selectedAmenity) {
-                "Favorites" -> favoriteIds.contains(r.id)
-                "Wishlist" -> wishlistMap.containsKey(r.id)
-                "All", null -> true
-                else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
-            }
-
-            matchesQuery && matchesCategory
-        }.map { r ->
-            val dist = DistanceCalculator.calculateDistanceMiles(
-                selectedAnchor.latitude, selectedAnchor.longitude,
-                r.latitude, r.longitude
-            )
-            Pair(r, dist)
-        }.sortedBy { it.second }
+        sortAndFilterRestaurants(
+            restaurants = restaurants,
+            favoriteIds = favoriteIds,
+            wishlistMap = wishlistMap,
+            searchQuery = searchQuery,
+            selectedAmenity = selectedAmenity,
+            selectedAnchor = selectedAnchor
+        )
     }
 
     Scaffold(

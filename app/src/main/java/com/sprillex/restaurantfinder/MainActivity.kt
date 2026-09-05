@@ -1,13 +1,20 @@
 package com.sprillex.restaurantfinder
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.location.*
 import com.sprillex.restaurantfinder.data.*
+import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
 import com.sprillex.restaurantfinder.ui.components.AddFavoriteDishDialog
@@ -20,8 +27,24 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var locationCallback: LocationCallback? = null
+    private var gpsLocationState by mutableStateOf<AnchorLocation?>(null)
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            startGpsLocationUpdates()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        checkAndRequestLocationPermissions()
 
         val preferenceManager = PreferenceManager(this)
         val initialAnchorIndex = preferenceManager.getSelectedAnchorIndex().coerceIn(0, LocationManager.PRESET_ANCHORS.lastIndex)
@@ -54,6 +77,14 @@ class MainActivity : ComponentActivity() {
                     var selectedAnchor by remember {
                         mutableStateOf(LocationManager.PRESET_ANCHORS[initialAnchorIndex])
                     }
+
+                    val effectiveAnchor = remember(selectedAnchor, gpsLocationState) {
+                        if (selectedAnchor.isGps && gpsLocationState != null) {
+                            gpsLocationState!!
+                        } else {
+                            selectedAnchor
+                        }
+                    }
                     var selectedRestaurantForDetail by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForWishlist by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForAddDish by remember { mutableStateOf<Restaurant?>(null) }
@@ -75,12 +106,15 @@ class MainActivity : ComponentActivity() {
                         wishlistMap = wishlistMap,
                         dishWishlistMap = dishWishlistMap,
                         favoriteDishMap = favoriteDishMap,
-                        selectedAnchor = selectedAnchor,
+                        selectedAnchor = effectiveAnchor,
                         onAnchorSelected = { anchor ->
                             selectedAnchor = anchor
                             val newIndex = LocationManager.PRESET_ANCHORS.indexOf(anchor)
                             if (newIndex >= 0) {
                                 preferenceManager.setSelectedAnchorIndex(newIndex)
+                            }
+                            if (anchor.isGps) {
+                                checkAndRequestLocationPermissions()
                             }
                         },
                         onFavoriteToggle = toggleFavorite,
@@ -207,5 +241,52 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun checkAndRequestLocationPermissions() {
+        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+        if (fineGranted || coarseGranted) {
+            startGpsLocationUpdates()
+        } else {
+            requestPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    private fun startGpsLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+            if (loc != null) {
+                gpsLocationState = AnchorLocation("Current Location (GPS)", loc.latitude, loc.longitude, isGps = true)
+            }
+        }
+
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 10000L)
+            .setMinUpdateIntervalMillis(5000L)
+            .build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                val loc = result.lastLocation ?: return
+                gpsLocationState = AnchorLocation("Current Location (GPS)", loc.latitude, loc.longitude, isGps = true)
+            }
+        }
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback!!, Looper.getMainLooper())
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
     }
 }

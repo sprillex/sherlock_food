@@ -153,7 +153,7 @@ This roadmap outlines the complete architecture, UI design standards, location m
 2. **[x] Social Sharing (System Share Sheet)**
    - Dispatch Android `ACTION_SEND` intents with formatted text and location links for venue sharing.
 
-3. **[ ] Dynamic Location Awareness & Proximity Sorting**
+3. **[x] Dynamic Location Awareness & Proximity Sorting**
    - Continuous device GPS position monitoring and real-time auto-sorting by distance.
 
 4. **[ ] AI Integration**
