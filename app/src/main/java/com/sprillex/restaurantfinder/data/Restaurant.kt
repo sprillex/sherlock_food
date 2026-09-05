@@ -1,9 +1,18 @@
 package com.sprillex.restaurantfinder.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "restaurants")
+@Entity(
+    tableName = "restaurants",
+    indices = [
+        Index(value = ["city"], name = "index_restaurants_city"),
+        Index(value = ["cuisine"], name = "index_restaurants_cuisine"),
+        Index(value = ["amenity"], name = "index_restaurants_amenity"),
+        Index(value = ["latitude", "longitude"], name = "index_restaurants_latitude_longitude")
+    ]
+)
 data class Restaurant(
     @PrimaryKey val id: Long,
     val name: String,
