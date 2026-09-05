@@ -20,6 +20,7 @@ import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
 import com.sprillex.restaurantfinder.ui.components.AddFavoriteDishDialog
+import com.sprillex.restaurantfinder.ui.components.SettingsDialog
 import com.sprillex.restaurantfinder.ui.components.WishlistDialog
 import com.sprillex.restaurantfinder.ui.screens.DetailBottomSheet
 import com.sprillex.restaurantfinder.ui.screens.MainScreen
@@ -48,12 +49,14 @@ class MainActivity : ComponentActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         checkAndRequestLocationPermissions()
 
-        val preferenceManager = PreferenceManager(this)
-        val initialAnchorIndex = preferenceManager.getSelectedAnchorIndex().coerceIn(0, LocationManager.PRESET_ANCHORS.lastIndex)
-
         setContent {
             RestaurantFinderTheme {
                 Surface {
+                    val preferenceManager = remember { PreferenceManager(applicationContext) }
+                    val initialAnchorIndex = remember { preferenceManager.getSelectedAnchorIndex().coerceIn(0, LocationManager.PRESET_ANCHORS.lastIndex) }
+                    var userApiKey by remember { mutableStateOf(preferenceManager.getGeminiApiKey()) }
+                    var isSettingsOpen by remember { mutableStateOf(false) }
+
                     val appDb = remember { AppDatabase.getDatabase(applicationContext) }
                     val userDb = remember { UserDatabase.getDatabase(applicationContext) }
 
@@ -128,26 +131,38 @@ class MainActivity : ComponentActivity() {
                         },
                         onFavoriteToggle = toggleFavorite,
                         onWishlistClick = { selectedRestaurantForWishlist = it },
-                        onBackupClick = {
-                            lifecycleScope.launch {
-                                val path = BackupManager.exportUserData(applicationContext, userDb)
-                                Toast.makeText(applicationContext, "Backup saved: $path", Toast.LENGTH_LONG).show()
-                            }
-                        },
-                        onRestoreClick = {
-                            lifecycleScope.launch {
-                                val backupFile = File(filesDir, "user_data_backup.json")
-                                val success = BackupManager.restoreUserData(applicationContext, userDb, backupFile)
-                                val msg = if (success) "User data restored successfully" else "No backup file found"
-                                Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onSettingsClick = { isSettingsOpen = true },
                         onRestaurantClick = { selectedRestaurantForDetail = it },
                         onNavigateClick = { IntentHelper.launchNavigation(this, it) },
                         onCallClick = { r -> r.phone?.let { IntentHelper.launchDialer(this, it) } },
                         onWebsiteClick = { r -> r.website?.let { IntentHelper.launchBrowser(this, it) } },
                         onShareClick = { IntentHelper.shareRestaurant(this, it) }
                     )
+
+                    if (isSettingsOpen) {
+                        SettingsDialog(
+                            currentApiKey = userApiKey,
+                            onSaveApiKey = { newKey ->
+                                preferenceManager.setGeminiApiKey(newKey)
+                                userApiKey = newKey
+                            },
+                            onBackupClick = {
+                                lifecycleScope.launch {
+                                    val path = BackupManager.exportUserData(applicationContext, userDb)
+                                    Toast.makeText(applicationContext, "Backup saved: $path", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            onRestoreClick = {
+                                lifecycleScope.launch {
+                                    val backupFile = File(filesDir, "user_data_backup.json")
+                                    val success = BackupManager.restoreUserData(applicationContext, userDb, backupFile)
+                                    val msg = if (success) "User data restored successfully" else "No backup file found"
+                                    Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onDismiss = { isSettingsOpen = false }
+                        )
+                    }
 
                     selectedRestaurantForDetail?.let { restaurant ->
                         val restaurantWithDetailsFlow = remember(restaurant.id) {
@@ -165,7 +180,10 @@ class MainActivity : ComponentActivity() {
                                     isLoadingEnrichment = true
                                     lifecycleScope.launch {
                                         try {
-                                            restaurantRepository.ensureDetailsEnriched(restaurant)
+                                            restaurantRepository.ensureDetailsEnriched(
+                                                restaurant = restaurant,
+                                                apiKeyOverride = userApiKey
+                                            )
                                         } finally {
                                             isLoadingEnrichment = false
                                         }

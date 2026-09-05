@@ -5,10 +5,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -66,8 +65,7 @@ fun MainScreen(
     onAnchorSelected: (AnchorLocation) -> Unit,
     onFavoriteToggle: (String) -> Unit,
     onWishlistClick: (Restaurant) -> Unit,
-    onBackupClick: () -> Unit,
-    onRestoreClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onRestaurantClick: (Restaurant) -> Unit,
     onNavigateClick: (Restaurant) -> Unit,
     onCallClick: (Restaurant) -> Unit,
@@ -120,11 +118,8 @@ fun MainScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onBackupClick) {
-                        Icon(Icons.Default.Backup, contentDescription = "Export Backup")
-                    }
-                    IconButton(onClick = onRestoreClick) {
-                        Icon(Icons.Default.Restore, contentDescription = "Restore Backup")
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -169,7 +164,12 @@ fun MainScreen(
                     Text("No restaurants found", style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    ),
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     items(filteredRestaurants) { (restaurant, distMiles) ->
                         RestaurantCard(
                             restaurant = restaurant,

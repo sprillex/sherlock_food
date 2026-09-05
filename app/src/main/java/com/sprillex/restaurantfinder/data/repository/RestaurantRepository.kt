@@ -23,11 +23,11 @@ class RestaurantRepository(
      * Call this when opening the restaurant detail screen.
      * Executes network fetch only if cache is absent.
      */
-    suspend fun ensureDetailsEnriched(restaurant: Restaurant) {
+    suspend fun ensureDetailsEnriched(restaurant: Restaurant, apiKeyOverride: String? = null) {
         val cached = detailDao.getCachedDetails(restaurant.id)
         if (cached != null) return
 
-        val aiResult = aiClient.queryDiningProfile(restaurant)
+        val aiResult = aiClient.queryDiningProfile(restaurant, overrideApiKey = apiKeyOverride)
         if (aiResult != null && aiResult.found) {
             val entity = RestaurantDetailEntity(
                 restaurantId = restaurant.id,

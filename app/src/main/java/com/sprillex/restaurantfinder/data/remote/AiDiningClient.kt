@@ -48,8 +48,15 @@ class AiDiningClient(
         try { Log.e(TAG, msg, tr) } catch (_: Throwable) { println("E/$TAG: $msg ${tr?.message}") }
     }
 
-    suspend fun queryDiningProfile(restaurant: Restaurant): AiDiningResponse? = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) {
+    suspend fun queryDiningProfile(
+        restaurant: Restaurant,
+        overrideApiKey: String? = null
+    ): AiDiningResponse? = withContext(Dispatchers.IO) {
+        val effectiveApiKey = overrideApiKey?.trim()?.ifBlank { null }
+            ?: apiKey.trim().ifBlank { null }
+            ?: ""
+
+        if (effectiveApiKey.isBlank()) {
             logW("GEMINI_API_KEY is missing or blank. Skipping AI query.")
             return@withContext null
         }
@@ -58,7 +65,7 @@ class AiDiningClient(
             val userPrompt = buildUserPrompt(restaurant)
             val jsonRequestBody = buildRequestBody(SYSTEM_INSTRUCTION, userPrompt)
 
-            val url = URL("$GEMINI_ENDPOINT_URL?key=$apiKey")
+            val url = URL("$GEMINI_ENDPOINT_URL?key=$effectiveApiKey")
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
