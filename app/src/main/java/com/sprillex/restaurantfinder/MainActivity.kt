@@ -14,10 +14,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.location.*
 import com.sprillex.restaurantfinder.data.*
+import com.sprillex.restaurantfinder.data.remote.AiDiningClient
+import com.sprillex.restaurantfinder.data.repository.RestaurantRepository
 import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
 import com.sprillex.restaurantfinder.ui.components.AddFavoriteDishDialog
+import com.sprillex.restaurantfinder.ui.components.SettingsDialog
 import com.sprillex.restaurantfinder.ui.components.WishlistDialog
 import com.sprillex.restaurantfinder.ui.screens.DetailBottomSheet
 import com.sprillex.restaurantfinder.ui.screens.MainScreen
@@ -46,14 +49,24 @@ class MainActivity : ComponentActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         checkAndRequestLocationPermissions()
 
-        val preferenceManager = PreferenceManager(this)
-        val initialAnchorIndex = preferenceManager.getSelectedAnchorIndex().coerceIn(0, LocationManager.PRESET_ANCHORS.lastIndex)
-
         setContent {
             RestaurantFinderTheme {
                 Surface {
+                    val preferenceManager = remember { PreferenceManager(applicationContext) }
+                    val initialAnchorIndex = remember { preferenceManager.getSelectedAnchorIndex().coerceIn(0, LocationManager.PRESET_ANCHORS.lastIndex) }
+                    var userApiKey by remember { mutableStateOf(preferenceManager.getGeminiApiKey()) }
+                    var isSettingsOpen by remember { mutableStateOf(false) }
+
                     val appDb = remember { AppDatabase.getDatabase(applicationContext) }
                     val userDb = remember { UserDatabase.getDatabase(applicationContext) }
+
+                    val aiClient = remember { AiDiningClient() }
+                    val restaurantRepository = remember {
+                        RestaurantRepository(
+                            appDb.restaurantDetailDao(),
+                            aiClient
+                        )
+                    }
 
                     val restaurantsFlow = remember { appDb.restaurantDao().getAllRestaurants() }
                     val restaurants by restaurantsFlow.collectAsState(initial = emptyList())
@@ -119,20 +132,7 @@ class MainActivity : ComponentActivity() {
                         },
                         onFavoriteToggle = toggleFavorite,
                         onWishlistClick = { selectedRestaurantForWishlist = it },
-                        onBackupClick = {
-                            lifecycleScope.launch {
-                                val path = BackupManager.exportUserData(applicationContext, userDb)
-                                Toast.makeText(applicationContext, "Backup saved: $path", Toast.LENGTH_LONG).show()
-                            }
-                        },
-                        onRestoreClick = {
-                            lifecycleScope.launch {
-                                val backupFile = File(filesDir, "user_data_backup.json")
-                                val success = BackupManager.restoreUserData(applicationContext, userDb, backupFile)
-                                val msg = if (success) "User data restored successfully" else "No backup file found"
-                                Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onSettingsClick = { isSettingsOpen = true },
                         onRestaurantClick = { selectedRestaurantForDetail = it },
                         onNavigateClick = { IntentHelper.launchNavigation(this, it) },
                         onCallClick = { r -> r.phone?.let { IntentHelper.launchDialer(this, it) } },
@@ -140,9 +140,58 @@ class MainActivity : ComponentActivity() {
                         onShareClick = { IntentHelper.shareRestaurant(this, it) }
                     )
 
+                    if (isSettingsOpen) {
+                        SettingsDialog(
+                            currentApiKey = userApiKey,
+                            onValidateKey = { key -> aiClient.validateApiKey(key) },
+                            onSaveApiKey = { newKey ->
+                                preferenceManager.setGeminiApiKey(newKey)
+                                userApiKey = newKey
+                            },
+                            onBackupClick = {
+                                lifecycleScope.launch {
+                                    val path = BackupManager.exportUserData(applicationContext, userDb)
+                                    Toast.makeText(applicationContext, "Backup saved: $path", Toast.LENGTH_LONG).show()
+                                }
+                            },
+                            onRestoreClick = {
+                                lifecycleScope.launch {
+                                    val backupFile = File(filesDir, "user_data_backup.json")
+                                    val success = BackupManager.restoreUserData(applicationContext, userDb, backupFile)
+                                    val msg = if (success) "User data restored successfully" else "No backup file found"
+                                    Toast.makeText(applicationContext, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onDismiss = { isSettingsOpen = false }
+                        )
+                    }
+
                     selectedRestaurantForDetail?.let { restaurant ->
+                        val restaurantWithDetailsFlow = remember(restaurant.id) {
+                            restaurantRepository.observeRestaurant(restaurant.id)
+                        }
+                        val restaurantWithDetails by restaurantWithDetailsFlow.collectAsState(initial = null)
+                        var isLoadingEnrichment by remember(restaurant.id) { mutableStateOf(false) }
+
                         DetailBottomSheet(
                             restaurant = restaurant,
+                            details = restaurantWithDetails?.details,
+                            isLoadingEnrichment = isLoadingEnrichment,
+                            onEnrich = {
+                                if (restaurantWithDetails?.details == null && !isLoadingEnrichment) {
+                                    isLoadingEnrichment = true
+                                    lifecycleScope.launch {
+                                        try {
+                                            restaurantRepository.ensureDetailsEnriched(
+                                                restaurant = restaurant,
+                                                apiKeyOverride = userApiKey
+                                            )
+                                        } finally {
+                                            isLoadingEnrichment = false
+                                        }
+                                    }
+                                }
+                            },
                             isFavorite = favoriteIds.contains(restaurant.id),
                             wishlist = wishlistMap[restaurant.id],
                             dishes = dishWishlistMap[restaurant.id] ?: emptyList(),

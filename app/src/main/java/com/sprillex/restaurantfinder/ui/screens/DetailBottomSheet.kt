@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Call
@@ -19,13 +20,16 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.data.DishWishlist
 import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
+import com.sprillex.restaurantfinder.data.RestaurantDetailEntity
 import com.sprillex.restaurantfinder.data.Wishlist
+import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel1
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel2
 import com.sprillex.restaurantfinder.ui.theme.TextPrimary
 import com.sprillex.restaurantfinder.ui.theme.TextSecondary
@@ -34,6 +38,9 @@ import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 @Composable
 fun DetailBottomSheet(
     restaurant: Restaurant,
+    details: RestaurantDetailEntity? = null,
+    isLoadingEnrichment: Boolean = false,
+    onEnrich: () -> Unit = {},
     isFavorite: Boolean,
     wishlist: Wishlist?,
     dishes: List<DishWishlist>,
@@ -50,6 +57,10 @@ fun DetailBottomSheet(
     onWebsiteClick: () -> Unit,
     onShareClick: () -> Unit
 ) {
+    LaunchedEffect(restaurant.id) {
+        onEnrich()
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = DarkSurfaceLevel2
@@ -57,6 +68,7 @@ fun DetailBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp)
         ) {
@@ -209,6 +221,130 @@ fun DetailBottomSheet(
                             onClick = { },
                             label = { Text(badge, style = MaterialTheme.typography.labelSmall) }
                         )
+                    }
+                }
+            }
+
+            // AI Dining Insights Card
+            if (details != null || isLoadingEnrichment) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DarkSurfaceLevel1),
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "AI Enrichment",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "AI Dining Insights",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = TextPrimary
+                                )
+                            }
+                            if (isLoadingEnrichment && details == null) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        if (isLoadingEnrichment && details == null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Checking local dining notes...",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                        } else if (details != null) {
+                            if (!details.editorialSummary.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = details.editorialSummary,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            val infoItems = mutableListOf<Pair<String, String>>()
+                            details.priceTier?.let { if (it != "unknown") infoItems.add("Price" to it) }
+                            details.serviceModel?.let { if (it != "unknown") infoItems.add("Service" to it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() }) }
+                            details.parking?.let { if (it != "unknown") infoItems.add("Parking" to it.replace('_', ' ').replaceFirstChar { c -> c.uppercase() }) }
+                            details.outdoorPatio?.let { if (it != "unknown") infoItems.add("Patio" to it.replaceFirstChar { c -> c.uppercase() }) }
+
+                            if (infoItems.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    infoItems.forEach { (label, value) ->
+                                        SuggestionChip(
+                                            onClick = { },
+                                            label = { Text("$label: $value", style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (!details.signatureItems.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Signature Items:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    details.signatureItems.forEach { item ->
+                                        AssistChip(
+                                            onClick = { },
+                                            label = { Text(item, style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (!details.vibeTags.isNullOrEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    details.vibeTags.forEach { tag ->
+                                        SuggestionChip(
+                                            onClick = { },
+                                            label = { Text("#$tag", style = MaterialTheme.typography.labelSmall) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (!details.goodToKnow.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Good to know: ${details.goodToKnow}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -14,7 +14,16 @@ class PreferenceManager(context: Context) {
         prefs.edit().putInt(KEY_ANCHOR_INDEX, index).apply()
     }
 
+    fun getGeminiApiKey(): String {
+        return prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
+    }
+
+    fun setGeminiApiKey(apiKey: String) {
+        prefs.edit().putString(KEY_GEMINI_API_KEY, apiKey).apply()
+    }
+
     companion object {
         private const val KEY_ANCHOR_INDEX = "key_anchor_index"
+        private const val KEY_GEMINI_API_KEY = "key_gemini_api_key"
     }
 }
