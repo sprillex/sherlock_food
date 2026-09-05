@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     var selectedRestaurantForAddDish by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForAddFavDish by remember { mutableStateOf<Restaurant?>(null) }
 
-                    val toggleFavorite: (Long) -> Unit = { restaurantId ->
+                    val toggleFavorite: (String) -> Unit = { restaurantId ->
                         lifecycleScope.launch {
                             if (favoriteIds.contains(restaurantId)) {
                                 userDb.favoriteDao().removeFavorite(Favorite(restaurantId))

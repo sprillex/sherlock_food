@@ -19,5 +19,5 @@ interface FavoriteDao {
     suspend fun removeFavorite(favorite: Favorite)
 
     @Query("SELECT EXISTS(SELECT 1 FROM user_favorites WHERE restaurantId = :restaurantId)")
-    fun isFavorite(restaurantId: Long): Flow<Boolean>
+    fun isFavorite(restaurantId: String): Flow<Boolean>
 }

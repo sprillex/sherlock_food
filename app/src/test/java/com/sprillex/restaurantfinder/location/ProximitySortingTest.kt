@@ -12,13 +12,13 @@ class ProximitySortingTest {
         val anchor = AnchorLocation("Toledo, OH", 41.6528, -83.5379)
 
         val closeRestaurant = Restaurant(
-            id = 1, name = "Close Diner", amenity = "restaurant", cuisine = null,
+            id = "node/1", name = "Close Diner", amenity = "restaurant", cuisine = null,
             street = null, housenumber = null, postcode = null, city = "Toledo",
             phone = null, website = null, latitude = 41.6530, longitude = -83.5380, last_updated = 0
         )
 
         val farRestaurant = Restaurant(
-            id = 2, name = "Far Bistro", amenity = "restaurant", cuisine = null,
+            id = "node/2", name = "Far Bistro", amenity = "restaurant", cuisine = null,
             street = null, housenumber = null, postcode = null, city = "Adrian",
             phone = null, website = null, latitude = 41.8975, longitude = -84.0372, last_updated = 0
         )

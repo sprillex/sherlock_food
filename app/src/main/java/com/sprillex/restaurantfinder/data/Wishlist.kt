@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "user_wishlist")
 data class Wishlist(
-    @PrimaryKey val restaurantId: Long,
+    @PrimaryKey val restaurantId: String,
     val notes: String = "",
     val priority: String = "Medium", // Low, Medium, High
     val addedAt: Long = System.currentTimeMillis()

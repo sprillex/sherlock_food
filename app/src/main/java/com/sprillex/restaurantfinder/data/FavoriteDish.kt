@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "favorite_dishes")
 data class FavoriteDish(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val restaurantId: Long,
+    val restaurantId: String,
     val dishName: String,
     val notes: String = "",
     val addedAt: Long = System.currentTimeMillis()

@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FavoriteDishDao {
     @Query("SELECT * FROM favorite_dishes WHERE restaurantId = :restaurantId")
-    fun getFavoriteDishesForRestaurant(restaurantId: Long): Flow<List<FavoriteDish>>
+    fun getFavoriteDishesForRestaurant(restaurantId: String): Flow<List<FavoriteDish>>
 
     @Query("SELECT * FROM favorite_dishes")
     fun getAllFavoriteDishes(): Flow<List<FavoriteDish>>

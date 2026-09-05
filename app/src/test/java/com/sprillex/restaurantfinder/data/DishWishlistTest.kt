@@ -9,13 +9,13 @@ class DishWishlistTest {
     @Test
     fun dishWishlist_propertiesAndDefaults() {
         val dish = DishWishlist(
-            restaurantId = 101L,
+            restaurantId = "node/101",
             dishName = "Tonkotsu Ramen",
             notes = "Extra chashu pork"
         )
 
         assertEquals(0L, dish.id)
-        assertEquals(101L, dish.restaurantId)
+        assertEquals("node/101", dish.restaurantId)
         assertEquals("Tonkotsu Ramen", dish.dishName)
         assertEquals("Extra chashu pork", dish.notes)
         assertTrue(dish.addedAt > 0)
@@ -24,7 +24,7 @@ class DishWishlistTest {
     @Test
     fun dishWishlist_defaultNotesIsEmpty() {
         val dish = DishWishlist(
-            restaurantId = 202L,
+            restaurantId = "node/202",
             dishName = "Margherita Pizza"
         )
 
