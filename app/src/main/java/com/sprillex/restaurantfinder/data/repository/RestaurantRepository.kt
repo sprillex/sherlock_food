@@ -28,10 +28,15 @@ class RestaurantRepository(
         if (cached != null) return
 
         val aiResult = aiClient.queryDiningProfile(restaurant, overrideApiKey = apiKeyOverride)
-        if (aiResult != null && aiResult.found) {
+        if (aiResult != null) {
+            val summary = if (aiResult.found) {
+                aiResult.editorialSummary
+            } else {
+                "No additional web dining notes found for this venue."
+            }
             val entity = RestaurantDetailEntity(
                 restaurantId = restaurant.id,
-                editorialSummary = aiResult.editorialSummary,
+                editorialSummary = summary,
                 signatureItems = aiResult.signatureItems,
                 priceTier = aiResult.priceTier,
                 vibeTags = aiResult.vibeTags,

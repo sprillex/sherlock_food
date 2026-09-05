@@ -167,6 +167,11 @@ class AiDiningClient(
     }
 
     fun sanitizeJsonString(rawText: String): String {
+        val firstBrace = rawText.indexOf('{')
+        val lastBrace = rawText.lastIndexOf('}')
+        if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+            return rawText.substring(firstBrace, lastBrace + 1).trim()
+        }
         var text = rawText.trim()
         if (text.startsWith("```")) {
             text = text.removePrefix("```json")
