@@ -1,7 +1,10 @@
 package com.sprillex.restaurantfinder.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -15,19 +18,19 @@ import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import com.sprillex.restaurantfinder.data.DishWishlist
-import com.sprillex.restaurantfinder.data.FavoriteDish
-import com.sprillex.restaurantfinder.data.Wishlist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sprillex.restaurantfinder.data.DishWishlist
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
+import com.sprillex.restaurantfinder.data.Wishlist
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel2
 import com.sprillex.restaurantfinder.ui.theme.TextPrimary
 import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DetailBottomSheet(
     restaurant: Restaurant,
@@ -54,6 +57,7 @@ fun DetailBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp)
         ) {
             Row(
@@ -85,6 +89,14 @@ fun DetailBottomSheet(
                 }
             }
 
+            if (!restaurant.brand.isNullOrBlank()) {
+                Text(
+                    text = "Brand: ${restaurant.brand}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             val category = restaurant.cuisine ?: restaurant.amenity.replace('_', ' ')
@@ -108,6 +120,97 @@ fun DetailBottomSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary
                 )
+            }
+
+            if (!restaurant.opening_hours.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.AccessTime,
+                        contentDescription = "Opening Hours",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Hours: ${restaurant.opening_hours}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            // Services, Accessibility, Dietary Chips
+            val serviceBadges = mutableListOf<String>()
+            restaurant.delivery?.let {
+                when (it) {
+                    "yes" -> serviceBadges.add("Delivery")
+                    "only" -> serviceBadges.add("Delivery Only")
+                    else -> {}
+                }
+            }
+            restaurant.takeaway?.let {
+                when (it) {
+                    "yes" -> serviceBadges.add("Takeaway")
+                    "only" -> serviceBadges.add("Takeaway Only")
+                    else -> {}
+                }
+            }
+            restaurant.drive_through?.let {
+                if (it == "yes") serviceBadges.add("Drive-Through")
+            }
+            restaurant.outdoor_seating?.let {
+                if (it == "yes") serviceBadges.add("Outdoor Seating")
+            }
+
+            val dietaryBadges = mutableListOf<String>()
+            restaurant.diet_vegetarian?.let {
+                when (it) {
+                    "yes" -> dietaryBadges.add("Vegetarian")
+                    "only" -> dietaryBadges.add("Vegetarian Only")
+                    else -> {}
+                }
+            }
+            restaurant.diet_vegan?.let {
+                when (it) {
+                    "yes" -> dietaryBadges.add("Vegan")
+                    "only" -> dietaryBadges.add("Vegan Only")
+                    else -> {}
+                }
+            }
+            restaurant.diet_gluten_free?.let {
+                when (it) {
+                    "yes" -> dietaryBadges.add("Gluten-Free")
+                    "only" -> dietaryBadges.add("Gluten-Free Only")
+                    else -> {}
+                }
+            }
+
+            val accessibilityBadge = restaurant.wheelchair?.let {
+                when (it) {
+                    "yes" -> "Wheelchair Accessible"
+                    "limited" -> "Limited Wheelchair Access"
+                    "designated" -> "Designated Wheelchair Access"
+                    else -> null
+                }
+            }
+
+            val allBadges = serviceBadges + dietaryBadges + listOfNotNull(accessibilityBadge)
+
+            if (allBadges.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    allBadges.forEach { badge ->
+                        SuggestionChip(
+                            onClick = { },
+                            label = { Text(badge, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

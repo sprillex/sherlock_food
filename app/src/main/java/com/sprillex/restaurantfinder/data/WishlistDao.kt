@@ -13,7 +13,7 @@ interface WishlistDao {
     fun getAllWishlistItems(): Flow<List<Wishlist>>
 
     @Query("SELECT * FROM user_wishlist WHERE restaurantId = :restaurantId")
-    suspend fun getWishlistItem(restaurantId: Long): Wishlist?
+    suspend fun getWishlistItem(restaurantId: String): Wishlist?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addOrUpdateWishlist(wishlist: Wishlist)
@@ -22,8 +22,8 @@ interface WishlistDao {
     suspend fun removeWishlist(wishlist: Wishlist)
 
     @Query("DELETE FROM user_wishlist WHERE restaurantId = :restaurantId")
-    suspend fun removeWishlistByRestaurantId(restaurantId: Long)
+    suspend fun removeWishlistByRestaurantId(restaurantId: String)
 
     @Query("SELECT EXISTS(SELECT 1 FROM user_wishlist WHERE restaurantId = :restaurantId)")
-    fun isInWishlist(restaurantId: Long): Flow<Boolean>
+    fun isInWishlist(restaurantId: String): Flow<Boolean>
 }

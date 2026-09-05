@@ -9,13 +9,13 @@ class FavoriteDishTest {
     @Test
     fun favoriteDish_propertiesAndDefaults() {
         val favDish = FavoriteDish(
-            restaurantId = 303L,
+            restaurantId = "node/303",
             dishName = "Smoked Beef Brisket",
             notes = "Extra barbecue sauce on side"
         )
 
         assertEquals(0L, favDish.id)
-        assertEquals(303L, favDish.restaurantId)
+        assertEquals("node/303", favDish.restaurantId)
         assertEquals("Smoked Beef Brisket", favDish.dishName)
         assertEquals("Extra barbecue sauce on side", favDish.notes)
         assertTrue(favDish.addedAt > 0)
@@ -24,7 +24,7 @@ class FavoriteDishTest {
     @Test
     fun favoriteDish_defaultNotesIsEmpty() {
         val favDish = FavoriteDish(
-            restaurantId = 404L,
+            restaurantId = "node/404",
             dishName = "Classic Cheeseburger"
         )
 

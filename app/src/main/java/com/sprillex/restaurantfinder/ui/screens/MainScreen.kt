@@ -25,8 +25,8 @@ import com.sprillex.restaurantfinder.ui.components.RestaurantCard
 
 fun sortAndFilterRestaurants(
     restaurants: List<Restaurant>,
-    favoriteIds: Set<Long>,
-    wishlistMap: Map<Long, Wishlist>,
+    favoriteIds: Set<String>,
+    wishlistMap: Map<String, Wishlist>,
     searchQuery: String,
     selectedAmenity: String?,
     selectedAnchor: AnchorLocation
@@ -58,13 +58,13 @@ fun sortAndFilterRestaurants(
 @Composable
 fun MainScreen(
     restaurants: List<Restaurant>,
-    favoriteIds: Set<Long>,
-    wishlistMap: Map<Long, Wishlist>,
-    dishWishlistMap: Map<Long, List<DishWishlist>>,
-    favoriteDishMap: Map<Long, List<FavoriteDish>>,
+    favoriteIds: Set<String>,
+    wishlistMap: Map<String, Wishlist>,
+    dishWishlistMap: Map<String, List<DishWishlist>>,
+    favoriteDishMap: Map<String, List<FavoriteDish>>,
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
-    onFavoriteToggle: (Long) -> Unit,
+    onFavoriteToggle: (String) -> Unit,
     onWishlistClick: (Restaurant) -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,

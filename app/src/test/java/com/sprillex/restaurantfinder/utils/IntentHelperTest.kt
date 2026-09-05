@@ -10,7 +10,7 @@ class IntentHelperTest {
     @Test
     fun formatShareText_formatsAllAvailableFields() {
         val restaurant = Restaurant(
-            id = 12345L,
+            id = "node/12345",
             name = "Test Bistro",
             amenity = "restaurant",
             cuisine = "Italian",
@@ -38,7 +38,7 @@ class IntentHelperTest {
     @Test
     fun formatShareText_handlesMissingOptionalFields() {
         val restaurant = Restaurant(
-            id = 67890L,
+            id = "way/67890",
             name = "Minimal Cafe",
             amenity = "cafe",
             cuisine = null,

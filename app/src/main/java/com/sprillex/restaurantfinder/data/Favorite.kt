@@ -5,6 +5,6 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "user_favorites")
 data class Favorite(
-    @PrimaryKey val restaurantId: Long,
+    @PrimaryKey val restaurantId: String,
     val addedAt: Long = System.currentTimeMillis()
 )
