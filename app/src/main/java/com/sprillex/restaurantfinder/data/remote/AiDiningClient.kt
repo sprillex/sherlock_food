@@ -118,9 +118,22 @@ class AiDiningClient(
                     val responseText = connection.inputStream.bufferedReader().use(BufferedReader::readText)
                     val extractedContent = parseGeminiResponseText(responseText) ?: continue
                     val cleanJson = sanitizeJsonString(extractedContent)
-                    return@withContext json.decodeFromString<AiDiningResponse>(cleanJson)
+                    return@withContext try {
+                        json.decodeFromString<AiDiningResponse>(cleanJson)
+                    } catch (e: Exception) {
+                        logE("Failed to parse deserialized dining response: $cleanJson", e)
+                        null
+                    }
+                } else if (responseCode == 429) {
+                    val errText = connection.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
+                    logE("Gemini API quota exceeded (HTTP 429). Failing fast: $errText")
+                    return@withContext null
+                } else if (responseCode == 503) {
+                    val errText = connection.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
+                    logW("Gemini API service unavailable (HTTP 503): $errText. Trying fallback endpoint...")
                 } else {
-                    logW("Gemini API endpoint $endpoint returned HTTP $responseCode. Trying fallback...")
+                    val errText = connection.errorStream?.bufferedReader()?.use(BufferedReader::readText) ?: ""
+                    logW("Gemini API endpoint $endpoint returned HTTP $responseCode: $errText. Trying fallback...")
                 }
             } catch (e: Exception) {
                 logE("Failed request to Gemini endpoint: $endpoint", e)
@@ -209,15 +222,21 @@ class AiDiningClient(
         }.toString()
     }
 
-    private fun parseGeminiResponseText(responseText: String): String? {
+    fun parseGeminiResponseText(responseText: String): String? {
         return try {
             val root = Json.parseToJsonElement(responseText)
-            val candidates = root.jsonObject["candidates"]?.jsonArray
-            val firstCandidate = candidates?.getOrNull(0)?.jsonObject
-            val content = firstCandidate?.get("content")?.jsonObject
-            val parts = content?.get("parts")?.jsonArray
-            val firstPart = parts?.getOrNull(0)?.jsonObject
-            firstPart?.get("text")?.jsonPrimitive?.content
+            val candidates = root.jsonObject["candidates"]?.jsonArray ?: return null
+            for (candidate in candidates) {
+                val content = candidate.jsonObject["content"]?.jsonObject ?: continue
+                val parts = content["parts"]?.jsonArray ?: continue
+                for (part in parts) {
+                    val text = part.jsonObject["text"]?.jsonPrimitive?.content
+                    if (!text.isNullOrBlank()) {
+                        return text
+                    }
+                }
+            }
+            null
         } catch (e: Exception) {
             logE("Error extracting text from Gemini response payload", e)
             null
