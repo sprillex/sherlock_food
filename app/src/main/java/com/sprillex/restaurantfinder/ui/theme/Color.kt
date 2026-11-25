@@ -2,7 +2,7 @@ package com.sprillex.restaurantfinder.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Robust Dark Mode Palette (AI_MANUAL_DESIGN_STANDARDS.md compliant)
+// Robust Dark Mode Palette (AI_MANUAL_DESIGN_STANDARDS.md / dark_mode.md compliant)
 // Base Background: Dark Grey #121212 (Not #000000 pure black to prevent OLED smearing)
 val DarkBgBody = Color(0xFF121212)
 
@@ -18,4 +18,6 @@ val TextDisabled = Color(0x61FFFFFF)  // 38% Opacity
 // Desaturated Accents
 val BrandPastelBlue = Color(0xFF8AB4F8)
 val ErrorPastelRed = Color(0xFFF28B82)
+val OpenPastelGreen = Color(0xFF81C995)
+val StarPastelAmber = Color(0xFFFDD663)
 val BorderDark = Color(0xFF333333)

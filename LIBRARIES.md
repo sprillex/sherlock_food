@@ -7,27 +7,59 @@
 ```json
 [
   {
-    "name": "androidx.core:core-ktx",
-    "version": "1.12.0",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.lifecycle:lifecycle-runtime-ktx",
-    "version": "2.7.0",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
     "name": "androidx.activity:activity-compose",
     "version": "1.8.2",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.material3:material3",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.material:material-icons-extended",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.ui:ui",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.ui:ui-graphics",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.ui:ui-tooling",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "androidx.compose.ui:ui-tooling-preview",
+    "version": "UNKNOWN",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
@@ -35,71 +67,31 @@
     "version": "2024.02.02",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "androidx.compose.ui:ui",
-    "version": "bom:2024.02.02",
+    "name": "androidx.core:core-ktx",
+    "version": "1.12.0",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "androidx.compose.ui:ui-graphics",
-    "version": "bom:2024.02.02",
+    "name": "androidx.lifecycle:lifecycle-runtime-ktx",
+    "version": "2.7.0",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "androidx.compose.ui:ui-tooling",
-    "version": "bom:2024.02.02",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.compose.ui:ui-tooling-preview",
-    "version": "bom:2024.02.02",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.compose.material3:material3",
-    "version": "bom:2024.02.02",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.compose.material:material-icons-extended",
-    "version": "bom:2024.02.02",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "com.google.android.gms:play-services-location",
-    "version": "21.1.0",
-    "scope": "runtime",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.room:room-runtime",
+    "name": "androidx.room:room-compiler",
     "version": "2.6.1",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
@@ -107,15 +99,23 @@
     "version": "2.6.1",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "androidx.room:room-compiler",
+    "name": "androidx.room:room-runtime",
     "version": "2.6.1",
-    "scope": "kapt",
+    "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
+    "direct": true
+  },
+  {
+    "name": "com.google.android.gms:play-services-location",
+    "version": "21.1.0",
+    "scope": "runtime",
+    "ecosystem": "Maven",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
@@ -123,63 +123,31 @@
     "version": "1.6.3",
     "scope": "runtime",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "junit:junit",
-    "version": "4.13.2",
-    "scope": "test",
-    "ecosystem": "Maven",
-    "license": "EPL-1.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.test.ext:junit",
-    "version": "1.1.5",
-    "scope": "androidTest",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
     "name": "androidx.test.espresso:espresso-core",
     "version": "3.5.1",
-    "scope": "androidTest",
+    "scope": "development",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "com.android.tools.build:gradle",
-    "version": "8.3.1",
-    "scope": "build",
+    "name": "androidx.test.ext:junit",
+    "version": "1.1.5",
+    "scope": "development",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   },
   {
-    "name": "org.jetbrains.kotlin:kotlin-gradle-plugin",
-    "version": "1.9.22",
-    "scope": "build",
+    "name": "junit:junit",
+    "version": "4.13.2",
+    "scope": "development",
     "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "org.jetbrains.kotlin:kotlin-serialization",
-    "version": "1.9.22",
-    "scope": "build",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
-    "direct": true
-  },
-  {
-    "name": "androidx.compose.compiler:compiler",
-    "version": "1.5.8",
-    "scope": "build",
-    "ecosystem": "Maven",
-    "license": "Apache-2.0",
+    "license": "UNKNOWN",
     "direct": true
   }
 ]

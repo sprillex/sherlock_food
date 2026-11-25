@@ -9,9 +9,10 @@
 **Sprillex Restaurant Finder** (`com.sprillex.restaurantfinder`) is an offline-first Android Jetpack Compose application for discovering food and drink venues across **Southeast Michigan (Monroe & Lenawee counties)** and **Northwest Ohio (Lucas & Wood counties)**, paired with optional remote build automation (`android_tools/`).
 
 - **Offline OSM Spatial Discovery:** Ships with `app/src/main/assets/regional_restaurants.db` (1,188 OpenStreetMap venues: 522 `restaurant`, 460 `fast_food`, 85 `cafe`, 81 `bar`, 40 `pub`; bounding box `41.2500921..42.0997607`, `-84.4326343..-83.2800916`), indexed on `(latitude, longitude)`, `amenity`, `cuisine`, `city`, `brand`, and `(delivery, takeaway)`.
-- **Dual Room Persistence:** Separates read-mostly venue/AI cache data (`AppDatabase`, `regional_restaurants.db`, v3) from personal user data (`UserDatabase`, `user_data.db`, v5) so OTA venue `@Upsert` syncs cannot wipe user records.
-- **On-Demand Gemini Enrichment:** Queries Google Gemini (`gemini-2.5-flash` with fallback models) and Google Search Grounding (`tools: [{"googleSearch": {}}]`) to cache editorial summaries, signature items, price tier, vibe tags, service model, parking, and patio availability in `restaurant_details`.
-- **Personal Collections & Backup:** Favorites, restaurant wishlists (`Low`/`Medium`/`High` priority + notes), dish wishlists, favorite dishes, and JSON export/restore (`user_data_backup.json`).
+- **Dual Room Persistence:** Separates read-mostly venue/AI cache data (`AppDatabase`, `regional_restaurants.db`, v3) from personal user data (`UserDatabase`, `user_data.db`, v6 with explicit `MIGRATION_5_6`) so OTA venue `@Upsert` syncs cannot wipe user records.
+- **Offline Hours & Personalization:** Includes an offline OSM `opening_hours` evaluator (`OpeningHoursParser`) for **Open Now** filtering and status badges, non-destructive local venue field overrides (`restaurant_overrides`), pinned manual dining insights (`manual_insights`), user-authored venue photos (`restaurant_photos` stored under `filesDir/restaurant_photos/`), and personal visit logs (`visit_logs` with 1–5 star ratings and ordered dishes).
+- **On-Demand Gemini Enrichment:** Queries Google Gemini (`gemini-2.5-flash` with fallback models) and Google Search Grounding (`tools: [{"googleSearch": {}}]`) to cache editorial summaries, signature items, price tier, vibe tags, service model, parking, and patio availability in `restaurant_details`, with manual force-refresh support.
+- **Personal Collections & Backup:** Favorites, restaurant wishlists (`Low`/`Medium`/`High` priority + notes), dish wishlists, favorite dishes, overrides, manual insights, visit logs, and photo metadata with JSON export/restore (`user_data_backup.json`, v5 backward-compatible) plus full ZIP archive export/import bundling `restaurant_photos/` via Storage Access Framework.
 - **Location & External Intents:** Fused GPS location (`ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION`) or preset municipal anchors (`Toledo, OH`, `Perrysburg, OH`, `Monroe, MI`, `Adrian, MI`), Haversine distance sorting, `geo:` navigation, `tel:` dialer, browser launch, and `ACTION_SEND` sharing.
 - **Robust Dark Mode & Crash Reporting:** Enforces `#121212` dark surfaces (`#1E1E1E` cards, `#2D2D2D` modals, `#8AB4F8` accent) and installs `CrashReporter` in `RestaurantFinderApp.onCreate()`.
 
@@ -81,7 +82,7 @@ For setting up the optional FastAPI build server (`android_tools/server.py`), se
 | `SharedPreferences` (`restaurant_finder_prefs`) | `key_anchor_index` | `0` (`Current Location (GPS)`) | Persisted index into `LocationManager.PRESET_ANCHORS` |
 | `SharedPreferences` (`restaurant_finder_prefs`) | `key_gemini_api_key` | `""` | In-app Gemini API key override (takes precedence over `BuildConfig`) |
 | App Assets | `app/src/main/assets/regional_restaurants.db` | Bundled v3 SQLite (`1,188` rows) | Pre-populated asset copied by `AppDatabase` (`createFromAsset`) |
-| App Files Dir | `context.filesDir/user_data_backup.json` | Created on export | JSON backup read/written by `BackupManager` |
+| App Files Dir | `context.filesDir/user_data_backup.json` & `restaurant_photos/` | Created on export / photo add | v6 JSON backup and downscaled (`<=1600px`) JPEG venue photos |
 | `android_tools` Env | `API_KEY`, `API_HOST`, `API_PORT` | `CHANGE_ME...`, `0.0.0.0`, `8080` | FastAPI Bearer auth & Uvicorn listen address |
 | `android_tools` Env | `SPRILLEX_ANDROID_HOME`, `ANDROID_TOOLS_DIR`, `SECONDARY_APK_DIR`, `SKIP_ADB_INSTALL` | `~/sprillex/android`, `/opt/julebot/bin`, `""`, `"true"` | Build workspace, script dir, NAS mirror, ADB install toggle |
 
@@ -114,9 +115,9 @@ adb logcat -s AiDiningClient:D AndroidRuntime:E
 
 ### 5.2 App Navigation Summary
 1. **Anchor Selection:** Tap the pin icon in the top bar (`Near Current Location (GPS)`) to switch between live GPS and preset cities (`Toledo, OH`, `Perrysburg, OH`, `Monroe, MI`, `Adrian, MI`).
-2. **Search & Filter:** Filter by name, cuisine, or city in the search field; tap category chips (`All`, `Favorites`, `Wishlist`, `Restaurant`, `Fast food`, `Cafe`, `Bar`, `Pub`). Results auto-sort by Haversine distance ascending.
-3. **Venue Card & Detail Sheet:** Tap favorite/bookmark icons or quick actions (`Navigate`, `Call`, `Website`, `Share`) directly on a card, or tap the card to open `DetailBottomSheet` (triggers on-demand Gemini enrichment if uncached, displays OSM attributes, **Favorite Menu Items**, and **Dishes I Want to Try**).
-4. **Settings & Backup:** Tap the gear icon to validate (`GET /v1beta/models`) & save a Gemini API key, or **Export** / **Restore** `user_data_backup.json`.
+2. **Search & Filter:** Filter by name, cuisine, or city in the search field; tap category chips (`All`, `Favorites`, `Wishlist`, `Open Now`, `Visited`, `Restaurant`, `Fast food`, `Cafe`, `Bar`, `Pub`). Local venue overrides apply before filtering/sorting, and results auto-sort by Haversine distance ascending.
+3. **Venue Card & Detail Sheet:** View **Open**/**Closed** badges and photo thumbnails directly on cards, or tap a card to open `DetailBottomSheet` (photo strip with Camera/Gallery add & full-screen preview, edit venue fields/closed toggle, pinned **Personal Dining Notes**, **AI Dining Insights** with manual **Refresh**, **Visit Log** ratings & check-ins, **Favorite Menu Items**, and **Dishes I Want to Try**).
+4. **Settings & Backup:** Tap the gear icon to validate (`GET /v1beta/models`) & save a Gemini API key, **Export/Restore JSON** (`user_data_backup.json`), or **Export/Restore ZIP** (JSON + `restaurant_photos/`).
 
 ---
 

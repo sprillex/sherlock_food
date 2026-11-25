@@ -1,12 +1,16 @@
 package com.sprillex.restaurantfinder.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -29,6 +33,8 @@ fun SettingsDialog(
     onSaveApiKey: (String) -> Unit,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit,
+    onExportZipClick: () -> Unit = {},
+    onRestoreZipClick: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var apiKeyText by remember { mutableStateOf(currentApiKey) }
@@ -73,6 +79,7 @@ fun SettingsDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 8.dp)
             ) {
                 // Gemini API Key Section
@@ -183,7 +190,7 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Export your favorites, wishlist, and menu preferences, or restore from a backup file.",
+                    text = "Export or restore your favorites, wishlist, overrides, manual insights, visit logs, and photo metadata (JSON) or bundle photos in a ZIP archive.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
@@ -200,7 +207,7 @@ fun SettingsDialog(
                     ) {
                         Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Export")
+                        Text("Export JSON")
                     }
 
                     OutlinedButton(
@@ -209,7 +216,32 @@ fun SettingsDialog(
                     ) {
                         Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Restore")
+                        Text("Restore JSON")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onExportZipClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Export ZIP")
+                    }
+
+                    OutlinedButton(
+                        onClick = onRestoreZipClick,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Unarchive, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Restore ZIP")
                     }
                 }
             }

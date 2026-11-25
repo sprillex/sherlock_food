@@ -19,7 +19,7 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-class AiDiningClient(
+open class AiDiningClient(
     private val apiKey: String = BuildConfig.GEMINI_API_KEY,
     private val json: Json = Json {
         ignoreUnknownKeys = true
@@ -81,7 +81,7 @@ class AiDiningClient(
         }
     }
 
-    suspend fun queryDiningProfile(
+    open suspend fun queryDiningProfile(
         restaurant: Restaurant,
         overrideApiKey: String? = null
     ): AiDiningResponse? = withContext(Dispatchers.IO) {

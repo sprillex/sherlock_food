@@ -16,11 +16,16 @@ import androidx.compose.ui.unit.dp
 import com.sprillex.restaurantfinder.data.DishWishlist
 import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
+import com.sprillex.restaurantfinder.data.RestaurantOverride
+import com.sprillex.restaurantfinder.data.RestaurantPhoto
+import com.sprillex.restaurantfinder.data.VisitLog
 import com.sprillex.restaurantfinder.data.Wishlist
+import com.sprillex.restaurantfinder.data.mergeRestaurantWithOverride
 import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.DistanceCalculator
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.RestaurantCard
+import com.sprillex.restaurantfinder.utils.OpeningHoursParser
 
 fun sortAndFilterRestaurants(
     restaurants: List<Restaurant>,
@@ -28,9 +33,17 @@ fun sortAndFilterRestaurants(
     wishlistMap: Map<String, Wishlist>,
     searchQuery: String,
     selectedAmenity: String?,
-    selectedAnchor: AnchorLocation
+    selectedAnchor: AnchorLocation,
+    overridesMap: Map<String, RestaurantOverride> = emptyMap(),
+    visitedIds: Set<String> = emptySet(),
+    openEvaluator: (Restaurant, RestaurantOverride?) -> Boolean? = { effective, ov ->
+        if (ov?.isClosed == true) false else OpeningHoursParser.isOpenNow(effective.opening_hours)
+    }
 ): List<Pair<Restaurant, Double>> {
-    return restaurants.filter { r ->
+    return restaurants.map { base ->
+        val ov = overridesMap[base.id]
+        Pair(mergeRestaurantWithOverride(base, ov), ov)
+    }.filter { (r, ov) ->
         val matchesQuery = searchQuery.isEmpty() ||
                 r.name.contains(searchQuery, ignoreCase = true) ||
                 (r.cuisine?.contains(searchQuery, ignoreCase = true) == true) ||
@@ -39,12 +52,14 @@ fun sortAndFilterRestaurants(
         val matchesCategory = when (selectedAmenity) {
             "Favorites" -> favoriteIds.contains(r.id)
             "Wishlist" -> wishlistMap.containsKey(r.id)
+            "Open Now" -> openEvaluator(r, ov) == true
+            "Visited" -> visitedIds.contains(r.id)
             "All", null -> true
             else -> r.amenity.equals(selectedAmenity, ignoreCase = true)
         }
 
         matchesQuery && matchesCategory
-    }.map { r ->
+    }.map { (r, _) ->
         val dist = DistanceCalculator.calculateDistanceMiles(
             selectedAnchor.latitude, selectedAnchor.longitude,
             r.latitude, r.longitude
@@ -61,6 +76,9 @@ fun MainScreen(
     wishlistMap: Map<String, Wishlist>,
     dishWishlistMap: Map<String, List<DishWishlist>>,
     favoriteDishMap: Map<String, List<FavoriteDish>>,
+    overridesMap: Map<String, RestaurantOverride> = emptyMap(),
+    photosMap: Map<String, List<RestaurantPhoto>> = emptyMap(),
+    visitLogsMap: Map<String, List<VisitLog>> = emptyMap(),
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
     onFavoriteToggle: (String) -> Unit,
@@ -76,16 +94,39 @@ fun MainScreen(
     var selectedAmenity by remember { mutableStateOf<String?>(null) }
     var anchorMenuExpanded by remember { mutableStateOf(false) }
 
-    val categories = listOf("All", "Favorites", "Wishlist", "restaurant", "fast_food", "cafe", "bar", "pub")
+    val categories = listOf(
+        "All",
+        "Favorites",
+        "Wishlist",
+        "Open Now",
+        "Visited",
+        "restaurant",
+        "fast_food",
+        "cafe",
+        "bar",
+        "pub"
+    )
+    val visitedIds = remember(visitLogsMap) { visitLogsMap.keys }
 
-    val filteredRestaurants = remember(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor) {
+    val filteredRestaurants = remember(
+        restaurants,
+        favoriteIds,
+        wishlistMap,
+        overridesMap,
+        visitedIds,
+        searchQuery,
+        selectedAmenity,
+        selectedAnchor
+    ) {
         sortAndFilterRestaurants(
             restaurants = restaurants,
             favoriteIds = favoriteIds,
             wishlistMap = wishlistMap,
             searchQuery = searchQuery,
             selectedAmenity = selectedAmenity,
-            selectedAnchor = selectedAnchor
+            selectedAnchor = selectedAnchor,
+            overridesMap = overridesMap,
+            visitedIds = visitedIds
         )
     }
 
@@ -97,7 +138,11 @@ fun MainScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Near " + selectedAnchor.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(
+                            "Near " + selectedAnchor.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f)
+                        )
                         IconButton(onClick = { anchorMenuExpanded = true }) {
                             Icon(Icons.Default.LocationOn, contentDescription = "Change Anchor")
                         }
@@ -178,6 +223,8 @@ fun MainScreen(
                             wishlist = wishlistMap[restaurant.id],
                             dishes = dishWishlistMap[restaurant.id] ?: emptyList(),
                             favoriteDishes = favoriteDishMap[restaurant.id] ?: emptyList(),
+                            isClosedOverride = overridesMap[restaurant.id]?.isClosed == true,
+                            photos = photosMap[restaurant.id] ?: emptyList(),
                             onFavoriteToggle = { onFavoriteToggle(restaurant.id) },
                             onWishlistClick = { onWishlistClick(restaurant) },
                             onClick = { onRestaurantClick(restaurant) },
