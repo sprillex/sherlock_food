@@ -29,7 +29,7 @@ fun WishlistDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (currentWishlist != null) "Edit Wishlist Item" else "Add to Wishlist",
+                text = if (currentWishlist != null) "Edit Want to Try" else "Add to Want to Try",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary
             )

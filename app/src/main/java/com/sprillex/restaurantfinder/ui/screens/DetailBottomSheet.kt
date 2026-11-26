@@ -1,12 +1,21 @@
 package com.sprillex.restaurantfinder.ui.screens
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,13 +48,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sprillex.restaurantfinder.data.CustomRestaurant
 import com.sprillex.restaurantfinder.data.DishWishlist
 import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.ManualInsight
@@ -71,7 +88,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun DetailBottomSheet(
     restaurant: Restaurant,
@@ -88,8 +105,12 @@ fun DetailBottomSheet(
     onEditManualInsightClick: () -> Unit = {},
     onAddPhotoCameraClick: () -> Unit = {},
     onAddPhotoGalleryClick: () -> Unit = {},
+    onEditPhotoClick: (RestaurantPhoto) -> Unit = {},
+    onSharePhotoClick: (RestaurantPhoto) -> Unit = {},
     onDeletePhotoClick: (RestaurantPhoto) -> Unit = {},
     onAddVisitLogClick: () -> Unit = {},
+    onEditVisitLogClick: (VisitLog) -> Unit = {},
+    onShareVisitLogClick: (VisitLog) -> Unit = {},
     onDeleteVisitLogClick: (VisitLog) -> Unit = {},
     isFavorite: Boolean,
     wishlist: Wishlist?,
@@ -98,8 +119,12 @@ fun DetailBottomSheet(
     onFavoriteToggle: () -> Unit,
     onWishlistClick: () -> Unit,
     onAddDishClick: () -> Unit,
+    onEditDishClick: (DishWishlist) -> Unit = {},
+    onShareDishClick: (DishWishlist) -> Unit = {},
     onDeleteDishClick: (DishWishlist) -> Unit,
     onAddFavoriteDishClick: () -> Unit,
+    onEditFavoriteDishClick: (FavoriteDish) -> Unit = {},
+    onShareFavoriteDishClick: (FavoriteDish) -> Unit = {},
     onDeleteFavoriteDishClick: (FavoriteDish) -> Unit,
     onDismiss: () -> Unit,
     onNavigateClick: () -> Unit,
@@ -111,10 +136,12 @@ fun DetailBottomSheet(
         onEnrich()
     }
 
+    val haptic = LocalHapticFeedback.current
     var addPhotoMenuExpanded by remember { mutableStateOf(false) }
-    var previewPhoto by remember { mutableStateOf<RestaurantPhoto?>(null) }
+    var previewPhotoId by remember { mutableStateOf<Long?>(null) }
     var photoPendingDelete by remember { mutableStateOf<RestaurantPhoto?>(null) }
 
+    val isCustomVenue = CustomRestaurant.isCustomId(restaurant.id)
     val openStatus: Boolean? = if (isClosedOverride) {
         false
     } else {
@@ -161,19 +188,22 @@ fun DetailBottomSheet(
                     IconButton(onClick = onWishlistClick) {
                         Icon(
                             imageVector = if (wishlist != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Wishlist",
+                            contentDescription = "Want to Try",
                             tint = if (wishlist != null) MaterialTheme.colorScheme.tertiary else TextSecondary
                         )
                     }
                 }
             }
 
-            if (hasOverride || openStatus != null) {
+            if (isCustomVenue || hasOverride || openStatus != null) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (isCustomVenue) {
+                        StatusBadgePill(label = "Custom Venue", textColor = BrandPastelBlue)
+                    }
                     if (isClosedOverride) {
                         StatusBadgePill(label = "Marked Closed", textColor = ErrorPastelRed)
                     } else if (openStatus != null) {
@@ -182,7 +212,7 @@ fun DetailBottomSheet(
                             textColor = if (openStatus) OpenPastelGreen else ErrorPastelRed
                         )
                     }
-                    if (hasOverride) {
+                    if (hasOverride && !isCustomVenue) {
                         StatusBadgePill(label = "Edited Locally", textColor = BrandPastelBlue)
                     }
                 }
@@ -343,7 +373,8 @@ fun DetailBottomSheet(
                     }
                     DropdownMenu(
                         expanded = addPhotoMenuExpanded,
-                        onDismissRequest = { addPhotoMenuExpanded = false }
+                        onDismissRequest = { addPhotoMenuExpanded = false },
+                        modifier = Modifier.background(DarkSurfaceLevel2)
                     ) {
                         DropdownMenuItem(
                             leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
@@ -379,10 +410,24 @@ fun DetailBottomSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(photos, key = { it.id }) { photo ->
-                        PhotoStripItem(
-                            photo = photo,
-                            onClick = { previewPhoto = photo }
-                        )
+                        var photoMenuExpanded by remember { mutableStateOf(false) }
+                        Box {
+                            PhotoStripItem(
+                                photo = photo,
+                                onClick = { previewPhotoId = photo.id },
+                                onLongClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    photoMenuExpanded = true
+                                }
+                            )
+                            ItemContextMenu(
+                                expanded = photoMenuExpanded,
+                                onDismiss = { photoMenuExpanded = false },
+                                onEdit = { onEditPhotoClick(photo) },
+                                onShare = { onSharePhotoClick(photo) },
+                                onDelete = { photoPendingDelete = photo }
+                            )
+                        }
                     }
                 }
             }
@@ -676,18 +721,26 @@ fun DetailBottomSheet(
                 ) {
                     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
                     visitLogs.sortedByDescending { it.visitedAt }.forEach { visit ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = DarkSurfaceLevel1),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
+                        var visitMenuExpanded by remember(visit.id) { mutableStateOf(false) }
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = DarkSurfaceLevel1),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Top
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            visitMenuExpanded = true
+                                        }
+                                    )
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -725,15 +778,14 @@ fun DetailBottomSheet(
                                         )
                                     }
                                 }
-                                IconButton(onClick = { onDeleteVisitLogClick(visit) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Visit Log",
-                                        tint = ErrorPastelRed,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
                             }
+                            ItemContextMenu(
+                                expanded = visitMenuExpanded,
+                                onDismiss = { visitMenuExpanded = false },
+                                onEdit = { onEditVisitLogClick(visit) },
+                                onShare = { onShareVisitLogClick(visit) },
+                                onDelete = { onDeleteVisitLogClick(visit) }
+                            )
                         }
                     }
                 }
@@ -785,24 +837,33 @@ fun DetailBottomSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     favoriteDishes.forEach { favDish ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
+                        var favDishMenuExpanded by remember(favDish.id) { mutableStateOf(false) }
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            favDishMenuExpanded = true
+                                        }
+                                    )
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
                                     Text(
                                         text = favDish.dishName,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = TextPrimary
                                     )
                                     if (favDish.notes.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = favDish.notes,
                                             style = MaterialTheme.typography.bodySmall,
@@ -810,15 +871,14 @@ fun DetailBottomSheet(
                                         )
                                     }
                                 }
-                                IconButton(onClick = { onDeleteFavoriteDishClick(favDish) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Favorite Dish",
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
                             }
+                            ItemContextMenu(
+                                expanded = favDishMenuExpanded,
+                                onDismiss = { favDishMenuExpanded = false },
+                                onEdit = { onEditFavoriteDishClick(favDish) },
+                                onShare = { onShareFavoriteDishClick(favDish) },
+                                onDelete = { onDeleteFavoriteDishClick(favDish) }
+                            )
                         }
                     }
                 }
@@ -870,24 +930,33 @@ fun DetailBottomSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     dishes.forEach { dish ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
+                        var dishMenuExpanded by remember(dish.id) { mutableStateOf(false) }
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .combinedClickable(
+                                        onClick = {},
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            dishMenuExpanded = true
+                                        }
+                                    )
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                ) {
                                     Text(
                                         text = dish.dishName,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = TextPrimary
                                     )
                                     if (dish.notes.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = dish.notes,
                                             style = MaterialTheme.typography.bodySmall,
@@ -895,15 +964,14 @@ fun DetailBottomSheet(
                                         )
                                     }
                                 }
-                                IconButton(onClick = { onDeleteDishClick(dish) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete Dish",
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
                             }
+                            ItemContextMenu(
+                                expanded = dishMenuExpanded,
+                                onDismiss = { dishMenuExpanded = false },
+                                onEdit = { onEditDishClick(dish) },
+                                onShare = { onShareDishClick(dish) },
+                                onDelete = { onDeleteDishClick(dish) }
+                            )
                         }
                     }
                 }
@@ -913,11 +981,13 @@ fun DetailBottomSheet(
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onWishlistClick() }
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "Wishlist Priority: ${wishlist.priority}",
+                            text = "Want to Try · Priority: ${wishlist.priority}",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -980,11 +1050,16 @@ fun DetailBottomSheet(
         }
     }
 
-    previewPhoto?.let { photo ->
-        PhotoPreviewDialog(
-            photo = photo,
-            onRequestDelete = { photoPendingDelete = photo },
-            onDismiss = { previewPhoto = null }
+    val activePreviewId = previewPhotoId
+    if (activePreviewId != null && photos.isNotEmpty()) {
+        val initialIndex = photos.indexOfFirst { it.id == activePreviewId }.coerceAtLeast(0)
+        PhotoPagerDialog(
+            photos = photos,
+            initialIndex = initialIndex,
+            onSharePhoto = onSharePhotoClick,
+            onEditPhoto = onEditPhotoClick,
+            onRequestDelete = { photo -> photoPendingDelete = photo },
+            onDismiss = { previewPhotoId = null }
         )
     }
 
@@ -1003,8 +1078,8 @@ fun DetailBottomSheet(
                     onClick = {
                         onDeletePhotoClick(photo)
                         photoPendingDelete = null
-                        if (previewPhoto?.id == photo.id) {
-                            previewPhoto = null
+                        if (previewPhotoId == photo.id && photos.size <= 1) {
+                            previewPhotoId = null
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ErrorPastelRed)
@@ -1018,6 +1093,64 @@ fun DetailBottomSheet(
                 }
             },
             containerColor = DarkSurfaceLevel2
+        )
+    }
+}
+
+@Composable
+private fun ItemContextMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        modifier = Modifier.background(DarkSurfaceLevel2)
+    ) {
+        DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = BrandPastelBlue
+                )
+            },
+            text = { Text("Edit", color = TextPrimary) },
+            onClick = {
+                onDismiss()
+                onEdit()
+            }
+        )
+        DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = null,
+                    tint = BrandPastelBlue
+                )
+            },
+            text = { Text("Share", color = TextPrimary) },
+            onClick = {
+                onDismiss()
+                onShare()
+            }
+        )
+        DropdownMenuItem(
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = ErrorPastelRed
+                )
+            },
+            text = { Text("Delete", color = ErrorPastelRed) },
+            onClick = {
+                onDismiss()
+                onDelete()
+            }
         )
     }
 }
@@ -1040,10 +1173,12 @@ private fun StatusBadgePill(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PhotoStripItem(
     photo: RestaurantPhoto,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val context = LocalContext.current
     val bitmap by produceState<Bitmap?>(initialValue = null, key1 = photo.relativePath) {
@@ -1056,7 +1191,11 @@ private fun PhotoStripItem(
     Column(
         modifier = Modifier
             .width(120.dp)
-            .clickable { onClick() }
+            .clip(RoundedCornerShape(10.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Box(
             modifier = Modifier
@@ -1108,19 +1247,28 @@ private fun PhotoStripItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PhotoPreviewDialog(
-    photo: RestaurantPhoto,
-    onRequestDelete: () -> Unit,
+private fun PhotoPagerDialog(
+    photos: List<RestaurantPhoto>,
+    initialIndex: Int,
+    onSharePhoto: (RestaurantPhoto) -> Unit,
+    onEditPhoto: (RestaurantPhoto) -> Unit,
+    onRequestDelete: (RestaurantPhoto) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val bitmap by produceState<Bitmap?>(initialValue = null, key1 = photo.relativePath) {
-        value = withContext(Dispatchers.IO) {
-            val file = PhotoStorageManager.resolvePhotoFile(context, photo.relativePath)
-            PhotoStorageManager.loadScaledBitmap(file, maxEdgePx = PhotoStorageManager.MAX_EDGE_PX)
-        }
+    val safeInitialIndex = initialIndex.coerceIn(0, (photos.size - 1).coerceAtLeast(0))
+    val pagerState = rememberPagerState(
+        initialPage = safeInitialIndex,
+        pageCount = { photos.size }
+    )
+    var isCurrentPageZoomed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(pagerState.currentPage) {
+        isCurrentPageZoomed = false
     }
+
+    val currentPhoto = photos.getOrNull(pagerState.currentPage) ?: photos.firstOrNull() ?: return
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1141,9 +1289,32 @@ private fun PhotoPreviewDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    StatusBadgePill(label = photo.category, textColor = BrandPastelBlue)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatusBadgePill(label = currentPhoto.category, textColor = BrandPastelBlue)
+                        StatusBadgePill(
+                            label = "${pagerState.currentPage + 1} / ${photos.size}",
+                            textColor = TextPrimary
+                        )
+                    }
                     Row {
-                        IconButton(onClick = onRequestDelete) {
+                        IconButton(onClick = { onSharePhoto(currentPhoto) }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share Photo",
+                                tint = BrandPastelBlue
+                            )
+                        }
+                        IconButton(onClick = { onEditPhoto(currentPhoto) }) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Photo Details",
+                                tint = BrandPastelBlue
+                            )
+                        }
+                        IconButton(onClick = { onRequestDelete(currentPhoto) }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete Photo",
@@ -1160,38 +1331,180 @@ private fun PhotoPreviewDialog(
                     }
                 }
 
-                Box(
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = !isCurrentPageZoomed,
+                    key = { index -> photos.getOrNull(index)?.id ?: index },
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                ) { page ->
+                    val pagePhoto = photos[page]
+                    ZoomablePhotoPage(
+                        photo = pagePhoto,
+                        isActivePage = page == pagerState.currentPage,
+                        onZoomStateChanged = { zoomed ->
+                            if (page == pagerState.currentPage) {
+                                isCurrentPageZoomed = zoomed
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    color = DarkSurfaceLevel2,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEditPhoto(currentPhoto) }
                 ) {
-                    val bmp = bitmap
-                    if (bmp != null) {
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = photo.caption.ifBlank { photo.category },
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "Photo file unavailable",
+                            text = currentPhoto.caption.ifBlank { "Tap to add caption or edit category..." },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = if (currentPhoto.caption.isNotBlank()) TextPrimary else TextSecondary,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Caption",
+                            tint = BrandPastelBlue,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
-
-                if (photo.caption.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = photo.caption,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextPrimary
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ZoomablePhotoPage(
+    photo: RestaurantPhoto,
+    isActivePage: Boolean,
+    onZoomStateChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val bitmap by produceState<Bitmap?>(initialValue = null, key1 = photo.relativePath) {
+        value = withContext(Dispatchers.IO) {
+            val file = PhotoStorageManager.resolvePhotoFile(context, photo.relativePath)
+            PhotoStorageManager.loadScaledBitmap(file, maxEdgePx = PhotoStorageManager.MAX_EDGE_PX)
+        }
+    }
+
+    var scale by remember(photo.id) { mutableFloatStateOf(1f) }
+    var offset by remember(photo.id) { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(isActivePage) {
+        if (!isActivePage && scale != 1f) {
+            scale = 1f
+            offset = Offset.Zero
+        }
+    }
+
+    LaunchedEffect(scale) {
+        onZoomStateChanged(scale > 1.01f)
+    }
+
+    fun clampOffset(candidate: Offset, targetScale: Float): Offset {
+        if (targetScale <= 1.01f || containerSize == IntSize.Zero) return Offset.Zero
+        val maxX = (containerSize.width * (targetScale - 1f)) / 2f
+        val maxY = (containerSize.height * (targetScale - 1f)) / 2f
+        return Offset(
+            x = candidate.x.coerceIn(-maxX, maxX),
+            y = candidate.y.coerceIn(-maxY, maxY)
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onSizeChanged { containerSize = it }
+            .pointerInput(photo.id) {
+                detectTapGestures(
+                    onDoubleTap = { tapOffset ->
+                        if (scale > 1.01f) {
+                            scale = 1f
+                            offset = Offset.Zero
+                        } else {
+                            val targetScale = 2.5f
+                            val centerX = containerSize.width / 2f
+                            val centerY = containerSize.height / 2f
+                            val desiredOffset = Offset(
+                                x = (centerX - tapOffset.x) * (targetScale - 1f),
+                                y = (centerY - tapOffset.y) * (targetScale - 1f)
+                            )
+                            scale = targetScale
+                            offset = clampOffset(desiredOffset, targetScale)
+                        }
+                    }
+                )
+            }
+            .pointerInput(photo.id) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    do {
+                        val event = awaitPointerEvent()
+                        val pressedCount = event.changes.count { it.pressed }
+                        val isMultiTouch = pressedCount >= 2
+                        val isZoomed = scale > 1.01f
+
+                        if (isMultiTouch || isZoomed) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+                            val nextScale = (scale * zoomChange).coerceIn(1f, 4f)
+                            val nextOffset = if (nextScale <= 1.01f) {
+                                Offset.Zero
+                            } else {
+                                clampOffset(offset + panChange, nextScale)
+                            }
+                            scale = nextScale
+                            offset = nextOffset
+                            if (isMultiTouch || nextScale > 1.01f) {
+                                event.changes.forEach { change ->
+                                    if (change.pressed) {
+                                        change.consume()
+                                    }
+                                }
+                            }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val bmp = bitmap
+        if (bmp != null) {
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = photo.caption.ifBlank { photo.category },
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+            )
+        } else {
+            Text(
+                text = "Photo file unavailable",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
+            )
         }
     }
 }

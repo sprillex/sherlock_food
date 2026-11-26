@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,6 +21,9 @@ interface RestaurantPhotoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPhoto(photo: RestaurantPhoto): Long
+
+    @Update
+    suspend fun updatePhoto(photo: RestaurantPhoto)
 
     @Delete
     suspend fun deletePhoto(photo: RestaurantPhoto)

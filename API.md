@@ -95,7 +95,7 @@ interface RestaurantDetailDao {
     @Query("DELETE ...") suspend fun deleteDetails(restaurantId: String)
 }
 
-// UserDatabase (user_data.db, version = 6, MIGRATION_5_6)
+// UserDatabase (user_data.db, version = 7, MIGRATION_5_6, MIGRATION_6_7)
 interface FavoriteDao {
     fun getAllFavorites(): Flow<List<Favorite>>
     suspend fun addFavorite(favorite: Favorite)
@@ -145,6 +145,7 @@ interface RestaurantPhotoDao {
     fun getPhotosForRestaurant(restaurantId: String): Flow<List<RestaurantPhoto>>
     suspend fun getPhotosListForRestaurant(restaurantId: String): List<RestaurantPhoto>
     suspend fun insertPhoto(photo: RestaurantPhoto): Long
+    suspend fun updatePhoto(photo: RestaurantPhoto)
     suspend fun deletePhoto(photo: RestaurantPhoto)
     suspend fun deletePhotoById(photoId: Long)
 }
@@ -153,8 +154,16 @@ interface VisitLogDao {
     fun getVisitLogsForRestaurant(restaurantId: String): Flow<List<VisitLog>>
     suspend fun getVisitLogsListForRestaurant(restaurantId: String): List<VisitLog>
     suspend fun upsertVisitLog(visitLog: VisitLog): Long
+    suspend fun updateVisitLog(visitLog: VisitLog)
     suspend fun deleteVisitLog(visitLog: VisitLog)
     suspend fun deleteVisitLogById(visitId: Long)
+}
+interface CustomRestaurantDao {
+    fun getAllCustomRestaurants(): Flow<List<CustomRestaurant>>
+    suspend fun getCustomRestaurantById(id: String): CustomRestaurant?
+    suspend fun upsertCustomRestaurant(customRestaurant: CustomRestaurant)
+    suspend fun removeCustomRestaurant(customRestaurant: CustomRestaurant)
+    suspend fun deleteCustomRestaurantById(id: String)
 }
 ```
 
@@ -164,22 +173,23 @@ interface VisitLogDao {
 | `RestaurantRepository` | `observeRestaurant(restaurantId: String): Flow<RestaurantWithDetails?>` | Emits cached `RestaurantWithDetails` and re-emits on Room table updates. |
 | `RestaurantRepository` | `suspend fun ensureDetailsEnriched(restaurant: Restaurant, apiKeyOverride: String? = null, forceRefresh: Boolean = false)` | Returns early if cached and `!forceRefresh`; otherwise queries `AiDiningClient` and upserts result (or `"found": false` note). |
 | `RestaurantOverrideMerger` | `mergeRestaurantWithOverride(base: Restaurant, override: RestaurantOverride?): Restaurant` / `Restaurant.applyOverride(...)` | Overlays non-null `RestaurantOverride` fields without altering `id`, `osm_type`, `osm_id`, `latitude`, or `longitude`. |
-| `PhotoStorageManager` | `createTempCameraUri(context)`, `saveImageFromUri(context, sourceUri, restaurantId)`, `resolvePhotoFile(context, relativePath)`, `deletePhotoFile(context, relativePath)`, `loadScaledBitmap(file, maxEdgePx)` | Manages EXIF-oriented, `<= 1600px` JPEG storage under `filesDir/restaurant_photos` and `FileProvider` camera captures. |
+| `CustomRestaurant` | `toRestaurant(): Restaurant`, `mergeVenueLists(osmRestaurants, customRestaurants)` | Maps user-created `"custom/<uuid>"` venues to `Restaurant` and merges them with `AppDatabase` venues. |
+| `PhotoStorageManager` | `createTempCameraUri(context)`, `getShareablePhotoUri(context, relativePath)`, `saveImageFromUri(context, sourceUri, restaurantId)`, `resolvePhotoFile(context, relativePath)`, `deletePhotoFile(context, relativePath)`, `loadScaledBitmap(file, maxEdgePx)` | Manages EXIF-oriented, `<= 1600px` JPEG storage under `filesDir/restaurant_photos` and `FileProvider` capture/share URIs. |
 | `OpeningHoursParser` | `isOpenNow(openingHours: String?, calendar: Calendar): Boolean?` / `isOpenAt(openingHours, dayIndex, minuteOfDay): Boolean?` | Offline evaluator for OSM `opening_hours` (`24/7`, day ranges, comma lists, overnight spans); returns `null` when missing or unparseable. |
 | `AiDiningClient` | `suspend fun validateApiKey(keyToTest: String): Result<Boolean>` | Calls `GET /v1beta/models?key=...` on `Dispatchers.IO`; fails on blank key or non-2xx. |
 | `AiDiningClient` | `suspend fun queryDiningProfile(restaurant: Restaurant, overrideApiKey: String? = null): AiDiningResponse?` | Posts grounded prompt across `CANDIDATE_ENDPOINTS`; fails fast on 429, retries 503. |
 | `AiDiningClient` | `buildUserPrompt(restaurant)`, `sanitizeJsonString(rawText)`, `parseGeminiResponseText(responseText)` | Builds MI/OH anchored prompt; strips markdown fences; extracts first non-blank candidate text part. |
 | `PreferenceManager` | `getSelectedAnchorIndex(): Int` / `setSelectedAnchorIndex(index: Int)` | Reads/writes `key_anchor_index` (default `0`) in `restaurant_finder_prefs`. |
 | `PreferenceManager` | `getGeminiApiKey(): String` / `setGeminiApiKey(apiKey: String)` | Reads/writes `key_gemini_api_key` (default `""`) in `restaurant_finder_prefs`. |
-| `BackupManager` | `encodeBackupJson(backup)` / `decodeBackupJson(content)` / `exportUserData(context, userDatabase)` / `restoreUserData(context, userDatabase, backupFile)` | `kotlinx.serialization` v6 JSON DTOs (favorites, wishlist, dishes, overrides, manual insights, photo metadata, visit logs) with legacy v5 fallback. |
+| `BackupManager` | `encodeBackupJson(backup)` / `decodeBackupJson(content)` / `exportUserData(context, userDatabase)` / `restoreUserData(context, userDatabase, backupFile)` | `kotlinx.serialization` v7 JSON DTOs (favorites, wishlist, dishes, overrides, manual insights, photo metadata, visit logs, custom restaurants) with v6 & legacy v5 fallback. |
 | `BackupManager` | `exportBackupArchive(context, userDatabase, uri)` / `restoreBackupArchive(context, userDatabase, uri)` / `exportBackupZip(...)` / `restoreBackupZip(...)` | Exports/imports ZIP archives bundling `user_data_backup.json` and `restaurant_photos/` via SAF. |
 | `DistanceCalculator` | `calculateDistanceMiles(lat1, lon1, lat2, lon2): Double` | Haversine distance in miles (`EARTH_RADIUS_MILES = 3958.8`). |
 | `DistanceCalculator` | `formatDistance(distanceMiles: Double): String` | `< 0.2` mi -> `"<feet> ft"`, `< 10.0` -> `"%.1f mi"`, else `"%.0f mi"`. |
 | `LocationManager` | `PRESET_ANCHORS: List<AnchorLocation>`, `GPS_ANCHOR`, `DEFAULT_ANCHOR` | `[GPS(41.6528,-83.5379), Toledo OH, Perrysburg OH, Monroe MI, Adrian MI]`. |
-| `IntentHelper` | `launchNavigation(ctx, r)`, `launchDialer(ctx, phone)`, `launchBrowser(ctx, url)`, `shareRestaurant(ctx, r)`, `formatShareText(r)` | Fires implicit `geo:0,0?q=...`, `tel:`, `https://`, or `ACTION_SEND` chooser; shows `Toast` on failure. |
+| `IntentHelper` | `launchNavigation(ctx, r)`, `launchDialer(ctx, phone)`, `launchBrowser(ctx, url)`, `shareRestaurant(ctx, r)`, `shareVisitLog(ctx, r, visit)`, `shareDish(ctx, r, dishName, notes, isFavorite)`, `sharePhoto(ctx, r, photo)`, `sharePhotoUri(...)`, `formatShareText(r)`, `formatVisitLogShareText(...)`, `formatDishShareText(...)` | Fires implicit `geo:0,0?q=...`, `tel:`, `https://`, `text/plain` `ACTION_SEND`, or `image/jpeg` `FileProvider` `ACTION_SEND` chooser (`FLAG_GRANT_READ_URI_PERMISSION`); shows `Toast` on failure. |
 | `CrashReporter` | `install(app: Application)`, `buildReportBody(...): String` | Installs global `UncaughtExceptionHandler` launching `ACTION_SEND` (`EXTRA_CRASH_PAYLOAD`, `EXTRA_STACK_TRACE`). |
 
 ### 3.3 UI State & Event Contracts (`ui.screens`)
-- `sortAndFilterRestaurants(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor, overridesMap, visitedIds, openEvaluator): List<Pair<Restaurant, Double>>`: Applies `RestaurantOverride` values, filters by query & category (`All`, `Favorites`, `Wishlist`, `Open Now`, `Visited`, amenity), and sorts ascending by Haversine distance.
-- `MainScreen(...)`: Renders top anchor dropdown, search field, category `FilterChip` row (`All`, `Favorites`, `Wishlist`, `Open Now`, `Visited`, `restaurant`, `fast_food`, `cafe`, `bar`, `pub`), and `LazyColumn` of `RestaurantCard`s (with Open/Closed badge & photo thumbnail indicator).
-- `DetailBottomSheet(...)`: Fires `LaunchedEffect(restaurant.id) { onEnrich() }` on open; displays OSM/overridden tags, Open/Closed badge, Photo Strip & full-screen viewer, pinned Manual Dining Insights card (`Manual` badge), AI Dining Insights card (`AI` badge + Refresh AI button), Visit Log history + average rating, `FavoriteDish` list, `DishWishlist` list, `Wishlist` card, and action buttons inside `ModalBottomSheet` (`DarkSurfaceLevel2`), backed by `EditRestaurantDialog`, `ManualInsightDialog`, `AddVisitLogDialog`, and `AddPhotoMetadataDialog`.
+- `sortAndFilterRestaurants(restaurants, favoriteIds, wishlistMap, searchQuery, selectedAmenity, selectedAnchor, overridesMap, visitedIds, openEvaluator): List<Pair<Restaurant, Double>>`: Applies `RestaurantOverride` values, filters by query & category (`All`, `Want to Try` / `Wishlist`, `Favorites`, `Open Now`, `Visited`, amenity), and sorts ascending by Haversine distance.
+- `MainScreen(...)`: Renders top anchor dropdown, search field, category `FilterChip` row (`All`, `Want to Try (N)`, `Favorites`, `Open Now`, `Visited`, `restaurant`, `fast_food`, `cafe`, `bar`, `pub`), `Add Custom Restaurant` FAB, and `LazyColumn` of `RestaurantCard`s (with `Custom` / `Open` / `Closed` badges, `Want to Try` priority & notes, and photo thumbnail indicator).
+- `DetailBottomSheet(...)`: Fires `LaunchedEffect(restaurant.id) { onEnrich() }` on open; displays OSM/overridden tags, `Custom Venue` / `Open` / `Closed` badges, Photo Strip & interactive `HorizontalPager` pinch-to-zoom/pan/double-tap viewer with `FileProvider` Share & editable caption banner, dark-mode (`#2D2D2D`) long-press context menus (`Edit`, `Share`, `Delete`) on photos, visit logs, favorite dishes, and dish wishlist items, pinned Manual Dining Insights card (`Manual` badge), AI Dining Insights card (`AI` badge + Refresh AI button), Visit Log history + average rating, `FavoriteDish` list, `DishWishlist` list, `Want to Try` card, and action buttons inside `ModalBottomSheet` (`DarkSurfaceLevel2`), backed by `AddRestaurantDialog`, `EditRestaurantDialog`, `ManualInsightDialog`, `AddVisitLogDialog`, `AddPhotoMetadataDialog`, `AddFavoriteDishDialog`, and `AddDishDialog`.

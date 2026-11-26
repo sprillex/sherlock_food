@@ -102,8 +102,34 @@ data class VisitLogBackupDto(
 )
 
 @Serializable
+data class CustomRestaurantBackupDto(
+    val id: String,
+    val name: String,
+    val amenity: String = "restaurant",
+    val cuisine: String? = null,
+    val street: String? = null,
+    val housenumber: String? = null,
+    val postcode: String? = null,
+    val city: String? = null,
+    val phone: String? = null,
+    val website: String? = null,
+    val openingHours: String? = null,
+    val takeaway: String? = null,
+    val delivery: String? = null,
+    val outdoorSeating: String? = null,
+    val driveThrough: String? = null,
+    val wheelchair: String? = null,
+    val dietVegetarian: String? = null,
+    val dietVegan: String? = null,
+    val dietGlutenFree: String? = null,
+    val latitude: Double,
+    val longitude: Double,
+    val createdAt: Long = 0L
+)
+
+@Serializable
 data class UserDataBackup(
-    val version: Int = 6,
+    val version: Int = 7,
     val selectedAnchorIndex: Int = 0,
     val favorites: List<FavoriteBackupDto> = emptyList(),
     val wishlist: List<WishlistBackupDto> = emptyList(),
@@ -112,7 +138,8 @@ data class UserDataBackup(
     val overrides: List<RestaurantOverrideBackupDto> = emptyList(),
     val manualInsights: List<ManualInsightBackupDto> = emptyList(),
     val photos: List<RestaurantPhotoBackupDto> = emptyList(),
-    val visitLogs: List<VisitLogBackupDto> = emptyList()
+    val visitLogs: List<VisitLogBackupDto> = emptyList(),
+    val customRestaurants: List<CustomRestaurantBackupDto> = emptyList()
 )
 
 data class BackupDaos(
@@ -123,7 +150,8 @@ data class BackupDaos(
     val restaurantOverrideDao: RestaurantOverrideDao,
     val manualInsightDao: ManualInsightDao,
     val restaurantPhotoDao: RestaurantPhotoDao,
-    val visitLogDao: VisitLogDao
+    val visitLogDao: VisitLogDao,
+    val customRestaurantDao: CustomRestaurantDao
 )
 
 object BackupManager {
@@ -145,7 +173,8 @@ object BackupManager {
             restaurantOverrideDao = userDatabase.restaurantOverrideDao(),
             manualInsightDao = userDatabase.manualInsightDao(),
             restaurantPhotoDao = userDatabase.restaurantPhotoDao(),
-            visitLogDao = userDatabase.visitLogDao()
+            visitLogDao = userDatabase.visitLogDao(),
+            customRestaurantDao = userDatabase.customRestaurantDao()
         )
     }
 
@@ -263,10 +292,11 @@ object BackupManager {
         val manualInsights = daos.manualInsightDao.getAllManualInsights().first()
         val photos = daos.restaurantPhotoDao.getAllPhotos().first()
         val visitLogs = daos.visitLogDao.getAllVisitLogs().first()
+        val customRestaurants = daos.customRestaurantDao.getAllCustomRestaurants().first()
         val selectedAnchorIndex = PreferenceManager(context).getSelectedAnchorIndex()
 
         return UserDataBackup(
-            version = 6,
+            version = 7,
             selectedAnchorIndex = selectedAnchorIndex,
             favorites = favorites.map { FavoriteBackupDto(it.restaurantId, it.addedAt) },
             wishlist = wishlist.map { WishlistBackupDto(it.restaurantId, it.notes, it.priority, it.addedAt) },
@@ -324,6 +354,32 @@ object BackupManager {
                     rating = it.rating,
                     notes = it.notes,
                     orderedDishes = it.orderedDishes
+                )
+            },
+            customRestaurants = customRestaurants.map {
+                CustomRestaurantBackupDto(
+                    id = it.id,
+                    name = it.name,
+                    amenity = it.amenity,
+                    cuisine = it.cuisine,
+                    street = it.street,
+                    housenumber = it.housenumber,
+                    postcode = it.postcode,
+                    city = it.city,
+                    phone = it.phone,
+                    website = it.website,
+                    openingHours = it.openingHours,
+                    takeaway = it.takeaway,
+                    delivery = it.delivery,
+                    outdoorSeating = it.outdoorSeating,
+                    driveThrough = it.driveThrough,
+                    wheelchair = it.wheelchair,
+                    dietVegetarian = it.dietVegetarian,
+                    dietVegan = it.dietVegan,
+                    dietGlutenFree = it.dietGlutenFree,
+                    latitude = it.latitude,
+                    longitude = it.longitude,
+                    createdAt = it.createdAt
                 )
             }
         )
@@ -475,6 +531,37 @@ object BackupManager {
                         )
                     )
                 }
+            }
+        }
+
+        for (custom in backup.customRestaurants) {
+            if (custom.id.isNotBlank() && custom.name.isNotBlank()) {
+                daos.customRestaurantDao.upsertCustomRestaurant(
+                    CustomRestaurant(
+                        id = custom.id,
+                        name = custom.name,
+                        amenity = custom.amenity.ifBlank { "restaurant" },
+                        cuisine = custom.cuisine,
+                        street = custom.street,
+                        housenumber = custom.housenumber,
+                        postcode = custom.postcode,
+                        city = custom.city,
+                        phone = custom.phone,
+                        website = custom.website,
+                        openingHours = custom.openingHours,
+                        takeaway = custom.takeaway,
+                        delivery = custom.delivery,
+                        outdoorSeating = custom.outdoorSeating,
+                        driveThrough = custom.driveThrough,
+                        wheelchair = custom.wheelchair,
+                        dietVegetarian = custom.dietVegetarian,
+                        dietVegan = custom.dietVegan,
+                        dietGlutenFree = custom.dietGlutenFree,
+                        latitude = custom.latitude,
+                        longitude = custom.longitude,
+                        createdAt = custom.createdAt
+                    )
+                )
             }
         }
     }

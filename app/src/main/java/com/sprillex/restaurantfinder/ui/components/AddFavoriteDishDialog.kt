@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.Restaurant
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel2
 import com.sprillex.restaurantfinder.ui.theme.TextPrimary
@@ -12,17 +13,18 @@ import com.sprillex.restaurantfinder.ui.theme.TextPrimary
 @Composable
 fun AddFavoriteDishDialog(
     restaurant: Restaurant,
+    existingDish: FavoriteDish? = null,
     onSave: (dishName: String, notes: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var dishName by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    var dishName by remember(existingDish?.id) { mutableStateOf(existingDish?.dishName.orEmpty()) }
+    var notes by remember(existingDish?.id) { mutableStateOf(existingDish?.notes.orEmpty()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Add Favorite Dish",
+                text = if (existingDish != null) "Edit Favorite Dish" else "Add Favorite Dish",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary
             )
@@ -69,7 +71,7 @@ fun AddFavoriteDishDialog(
                 },
                 enabled = dishName.isNotBlank()
             ) {
-                Text("Add")
+                Text(if (existingDish != null) "Save" else "Add")
             }
         },
         dismissButton = {

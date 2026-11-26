@@ -16,9 +16,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         RestaurantOverride::class,
         ManualInsight::class,
         RestaurantPhoto::class,
-        VisitLog::class
+        VisitLog::class,
+        CustomRestaurant::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class UserDatabase : RoomDatabase() {
@@ -30,6 +31,7 @@ abstract class UserDatabase : RoomDatabase() {
     abstract fun manualInsightDao(): ManualInsightDao
     abstract fun restaurantPhotoDao(): RestaurantPhotoDao
     abstract fun visitLogDao(): VisitLogDao
+    abstract fun customRestaurantDao(): CustomRestaurantDao
 
     companion object {
         @Volatile
@@ -112,6 +114,40 @@ abstract class UserDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `custom_restaurants` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `amenity` TEXT NOT NULL,
+                        `cuisine` TEXT,
+                        `street` TEXT,
+                        `housenumber` TEXT,
+                        `postcode` TEXT,
+                        `city` TEXT,
+                        `phone` TEXT,
+                        `website` TEXT,
+                        `openingHours` TEXT,
+                        `takeaway` TEXT,
+                        `delivery` TEXT,
+                        `outdoorSeating` TEXT,
+                        `driveThrough` TEXT,
+                        `wheelchair` TEXT,
+                        `dietVegetarian` TEXT,
+                        `dietVegan` TEXT,
+                        `dietGlutenFree` TEXT,
+                        `latitude` REAL NOT NULL,
+                        `longitude` REAL NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): UserDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -119,7 +155,7 @@ abstract class UserDatabase : RoomDatabase() {
                     UserDatabase::class.java,
                     "user_data.db"
                 )
-                    .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

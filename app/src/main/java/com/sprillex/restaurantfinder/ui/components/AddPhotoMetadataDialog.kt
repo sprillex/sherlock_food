@@ -16,17 +16,25 @@ import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 @Composable
 fun AddPhotoMetadataDialog(
     restaurant: Restaurant,
+    existingPhoto: RestaurantPhoto? = null,
     onSave: (category: String, caption: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedCategory by remember { mutableStateOf(RestaurantPhoto.CATEGORIES.first()) }
-    var caption by remember { mutableStateOf("") }
+    var selectedCategory by remember(existingPhoto?.id) {
+        mutableStateOf(
+            existingPhoto?.category?.takeIf { it in RestaurantPhoto.CATEGORIES }
+                ?: RestaurantPhoto.CATEGORIES.first()
+        )
+    }
+    var caption by remember(existingPhoto?.id) {
+        mutableStateOf(existingPhoto?.caption.orEmpty())
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Photo Details",
+                text = if (existingPhoto != null) "Edit Photo Details" else "Photo Details",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary
             )
@@ -75,7 +83,7 @@ fun AddPhotoMetadataDialog(
                 onClick = { onSave(selectedCategory, caption.trim()) },
                 colors = ButtonDefaults.buttonColors(containerColor = BrandPastelBlue)
             ) {
-                Text("Save Photo")
+                Text(if (existingPhoto != null) "Save" else "Save Photo")
             }
         },
         dismissButton = {

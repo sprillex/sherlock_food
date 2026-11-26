@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -25,6 +26,8 @@ import com.sprillex.restaurantfinder.location.AnchorLocation
 import com.sprillex.restaurantfinder.location.DistanceCalculator
 import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.RestaurantCard
+import com.sprillex.restaurantfinder.ui.theme.BrandPastelBlue
+import com.sprillex.restaurantfinder.ui.theme.DarkBgBody
 import com.sprillex.restaurantfinder.utils.OpeningHoursParser
 
 fun sortAndFilterRestaurants(
@@ -51,7 +54,7 @@ fun sortAndFilterRestaurants(
 
         val matchesCategory = when (selectedAmenity) {
             "Favorites" -> favoriteIds.contains(r.id)
-            "Wishlist" -> wishlistMap.containsKey(r.id)
+            "Want to Try", "Wishlist" -> wishlistMap.containsKey(r.id)
             "Open Now" -> openEvaluator(r, ov) == true
             "Visited" -> visitedIds.contains(r.id)
             "All", null -> true
@@ -81,6 +84,7 @@ fun MainScreen(
     visitLogsMap: Map<String, List<VisitLog>> = emptyMap(),
     selectedAnchor: AnchorLocation,
     onAnchorSelected: (AnchorLocation) -> Unit,
+    onAddRestaurantClick: () -> Unit = {},
     onFavoriteToggle: (String) -> Unit,
     onWishlistClick: (Restaurant) -> Unit,
     onSettingsClick: () -> Unit,
@@ -96,8 +100,8 @@ fun MainScreen(
 
     val categories = listOf(
         "All",
+        "Want to Try",
         "Favorites",
-        "Wishlist",
         "Open Now",
         "Visited",
         "restaurant",
@@ -169,6 +173,15 @@ fun MainScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddRestaurantClick,
+                containerColor = BrandPastelBlue,
+                contentColor = DarkBgBody
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Custom Restaurant")
+            }
         }
     ) { innerPadding ->
         Column(
@@ -194,10 +207,14 @@ fun MainScreen(
             ) {
                 items(categories) { category ->
                     val isSelected = (selectedAmenity == category) || (selectedAmenity == null && category == "All")
+                    val labelText = when (category) {
+                        "Want to Try" -> "Want to Try (${wishlistMap.size})"
+                        else -> category.replace('_', ' ').replaceFirstChar { it.uppercase() }
+                    }
                     FilterChip(
                         selected = isSelected,
                         onClick = { selectedAmenity = if (category == "All") null else category },
-                        label = { Text(category.replace('_', ' ').replaceFirstChar { it.uppercase() }) }
+                        label = { Text(labelText) }
                     )
                 }
             }
@@ -211,7 +228,7 @@ fun MainScreen(
             } else {
                 LazyColumn(
                     contentPadding = PaddingValues(
-                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        bottom = 88.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     ),
                     modifier = Modifier.fillMaxSize()
                 ) {

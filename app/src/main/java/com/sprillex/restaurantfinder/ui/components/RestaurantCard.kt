@@ -29,17 +29,20 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.sprillex.restaurantfinder.data.CustomRestaurant
 import com.sprillex.restaurantfinder.data.DishWishlist
 import com.sprillex.restaurantfinder.data.FavoriteDish
 import com.sprillex.restaurantfinder.data.PhotoStorageManager
 import com.sprillex.restaurantfinder.data.Restaurant
 import com.sprillex.restaurantfinder.data.RestaurantPhoto
 import com.sprillex.restaurantfinder.data.Wishlist
+import com.sprillex.restaurantfinder.ui.theme.BrandPastelBlue
 import com.sprillex.restaurantfinder.ui.theme.DarkBgBody
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel1
 import com.sprillex.restaurantfinder.ui.theme.DarkSurfaceLevel2
 import com.sprillex.restaurantfinder.ui.theme.ErrorPastelRed
 import com.sprillex.restaurantfinder.ui.theme.OpenPastelGreen
+import com.sprillex.restaurantfinder.ui.theme.StarPastelAmber
 import com.sprillex.restaurantfinder.ui.theme.TextPrimary
 import com.sprillex.restaurantfinder.ui.theme.TextSecondary
 import com.sprillex.restaurantfinder.utils.OpeningHoursParser
@@ -163,7 +166,7 @@ fun RestaurantCard(
                     IconButton(onClick = onWishlistClick) {
                         Icon(
                             imageVector = if (wishlist != null) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Wishlist",
+                            contentDescription = "Want to Try",
                             tint = if (wishlist != null) MaterialTheme.colorScheme.tertiary else TextSecondary
                         )
                     }
@@ -197,6 +200,20 @@ fun RestaurantCard(
                     modifier = Modifier.weight(1f, fill = false)
                 )
 
+                if (CustomRestaurant.isCustomId(restaurant.id)) {
+                    Surface(
+                        color = DarkSurfaceLevel2,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "Custom",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BrandPastelBlue,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
                 if (openStatus != null) {
                     Surface(
                         color = DarkSurfaceLevel2,
@@ -227,11 +244,25 @@ fun RestaurantCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (wishlist != null) {
+                        val priorityColor = when (wishlist.priority) {
+                            "High" -> StarPastelAmber
+                            "Low" -> OpenPastelGreen
+                            else -> BrandPastelBlue
+                        }
                         AssistChip(
                             onClick = onWishlistClick,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Bookmark,
+                                    contentDescription = null,
+                                    tint = priorityColor,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
                             label = {
                                 Text(
-                                    text = "Wishlist [${wishlist.priority}]" + if (wishlist.notes.isNotBlank()) ": ${wishlist.notes}" else "",
+                                    text = "Want to Try · ${wishlist.priority}",
+                                    color = priorityColor,
                                     maxLines = 1
                                 )
                             }
@@ -266,6 +297,23 @@ fun RestaurantCard(
                             label = {
                                 Text(text = "${favoriteDishes.size} fav dish${if (favoriteDishes.size > 1) "es" else ""}")
                             }
+                        )
+                    }
+                }
+                if (wishlist != null && wishlist.notes.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = DarkSurfaceLevel2,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onWishlistClick() }
+                    ) {
+                        Text(
+                            text = "Note: ${wishlist.notes}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextPrimary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
                     }
                 }

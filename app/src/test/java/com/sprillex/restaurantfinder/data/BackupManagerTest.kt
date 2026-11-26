@@ -171,6 +171,9 @@ class BackupManagerTest {
             items.value = items.value.filterNot { it.id == id } + withId
             return id
         }
+        override suspend fun updatePhoto(photo: RestaurantPhoto) {
+            items.value = items.value.filterNot { it.id == photo.id } + photo
+        }
         override suspend fun deletePhoto(photo: RestaurantPhoto) {
             items.value = items.value.filterNot { it.id == photo.id }
         }
@@ -193,11 +196,30 @@ class BackupManagerTest {
             items.value = items.value.filterNot { it.id == id } + withId
             return id
         }
+        override suspend fun updateVisitLog(visitLog: VisitLog) {
+            items.value = items.value.filterNot { it.id == visitLog.id } + visitLog
+        }
         override suspend fun deleteVisitLog(visitLog: VisitLog) {
             items.value = items.value.filterNot { it.id == visitLog.id }
         }
         override suspend fun deleteVisitLogById(visitId: Long) {
             items.value = items.value.filterNot { it.id == visitId }
+        }
+    }
+
+    private class FakeCustomRestaurantDao : CustomRestaurantDao {
+        val items = MutableStateFlow<List<CustomRestaurant>>(emptyList())
+        override fun getAllCustomRestaurants(): Flow<List<CustomRestaurant>> = items
+        override suspend fun getCustomRestaurantById(id: String): CustomRestaurant? =
+            items.value.firstOrNull { it.id == id }
+        override suspend fun upsertCustomRestaurant(customRestaurant: CustomRestaurant) {
+            items.value = items.value.filterNot { it.id == customRestaurant.id } + customRestaurant
+        }
+        override suspend fun removeCustomRestaurant(customRestaurant: CustomRestaurant) {
+            items.value = items.value.filterNot { it.id == customRestaurant.id }
+        }
+        override suspend fun deleteCustomRestaurantById(id: String) {
+            items.value = items.value.filterNot { it.id == id }
         }
     }
 
@@ -210,12 +232,13 @@ class BackupManagerTest {
             restaurantOverrideDao = FakeOverrideDao(),
             manualInsightDao = FakeManualInsightDao(),
             restaurantPhotoDao = FakePhotoDao(),
-            visitLogDao = FakeVisitLogDao()
+            visitLogDao = FakeVisitLogDao(),
+            customRestaurantDao = FakeCustomRestaurantDao()
         )
     }
 
     @Test
-    fun v6BackupRoundTripPreservesAllTablesAndSpecialCharacters() = runBlocking {
+    fun v7BackupRoundTripPreservesAllTablesCustomVenuesAndSpecialCharacters() = runBlocking {
         val prefs = InMemorySharedPreferences()
         val context = TestContext(prefs)
         val sourceDaos = createDaoBundle()
@@ -263,6 +286,22 @@ class BackupManagerTest {
                 orderedDishes = "Reuben"
             )
         )
+        sourceDaos.customRestaurantDao.upsertCustomRestaurant(
+            CustomRestaurant(
+                id = "custom/abc-123",
+                name = "Hidden Taco Truck",
+                amenity = "fast_food",
+                cuisine = "mexican",
+                street = "Adams St",
+                city = "Toledo",
+                postcode = "43604",
+                takeaway = "yes",
+                dietVegan = "yes",
+                latitude = 41.6531,
+                longitude = -83.5382,
+                createdAt = 900L
+            )
+        )
 
         val collected = BackupManager.collectBackup(context, sourceDaos)
         val jsonText = BackupManager.encodeBackupJson(collected)
@@ -273,11 +312,11 @@ class BackupManagerTest {
         val targetDaos = createDaoBundle()
 
         BackupManager.applyBackup(targetContext, targetDaos, decoded)
-        // Second apply should be idempotent for photos, visit logs, and dishes
+        // Second apply should be idempotent for photos, visit logs, custom venues, and dishes
         BackupManager.applyBackup(targetContext, targetDaos, decoded)
 
         val restored = BackupManager.collectBackup(targetContext, targetDaos)
-        assertEquals(6, restored.version)
+        assertEquals(7, restored.version)
         assertEquals(3, restored.selectedAnchorIndex)
         assertEquals(1, restored.favorites.size)
         assertEquals("Try \"special\" menu", restored.wishlist.first().notes)
@@ -289,6 +328,38 @@ class BackupManagerTest {
         assertEquals("node_1_photo.jpg", restored.photos.first().relativePath)
         assertEquals(1, restored.visitLogs.size)
         assertEquals(5, restored.visitLogs.first().rating)
+        assertEquals(1, restored.customRestaurants.size)
+        assertEquals("custom/abc-123", restored.customRestaurants.first().id)
+        assertEquals("Hidden Taco Truck", restored.customRestaurants.first().name)
+        assertEquals("yes", restored.customRestaurants.first().dietVegan)
+        assertEquals(41.6531, restored.customRestaurants.first().latitude, 0.0001)
+    }
+
+    @Test
+    fun v6BackupJsonRestoresCleanlyWithoutCustomRestaurants() = runBlocking {
+        val v6Json = """
+            {
+              "version": 6,
+              "selectedAnchorIndex": 1,
+              "favorites": [{"restaurantId": "node/10", "addedAt": 1000}],
+              "wishlist": [{"restaurantId": "way/20", "notes": "Weekend brunch", "priority": "High", "addedAt": 2000}],
+              "overrides": [{"restaurantId": "node/10", "phone": "419-555-0000", "updatedAt": 3000}]
+            }
+        """.trimIndent()
+
+        val decoded = BackupManager.decodeBackupJson(v6Json)
+        val prefs = InMemorySharedPreferences()
+        val context = TestContext(prefs)
+        val daos = createDaoBundle()
+
+        BackupManager.applyBackup(context, daos, decoded)
+        val restored = BackupManager.collectBackup(context, daos)
+
+        assertEquals(1, restored.selectedAnchorIndex)
+        assertEquals(1, restored.favorites.size)
+        assertEquals("Weekend brunch", restored.wishlist.first().notes)
+        assertEquals("419-555-0000", restored.overrides.first().phone)
+        assertTrue(restored.customRestaurants.isEmpty())
     }
 
     @Test

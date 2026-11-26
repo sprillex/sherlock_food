@@ -22,6 +22,7 @@ import com.sprillex.restaurantfinder.location.LocationManager
 import com.sprillex.restaurantfinder.ui.components.AddDishDialog
 import com.sprillex.restaurantfinder.ui.components.AddFavoriteDishDialog
 import com.sprillex.restaurantfinder.ui.components.AddPhotoMetadataDialog
+import com.sprillex.restaurantfinder.ui.components.AddRestaurantDialog
 import com.sprillex.restaurantfinder.ui.components.AddVisitLogDialog
 import com.sprillex.restaurantfinder.ui.components.EditRestaurantDialog
 import com.sprillex.restaurantfinder.ui.components.ManualInsightDialog
@@ -130,7 +131,15 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val restaurantsFlow = remember { appDb.restaurantDao().getAllRestaurants() }
-                    val restaurants by restaurantsFlow.collectAsState(initial = emptyList())
+                    val osmRestaurants by restaurantsFlow.collectAsState(initial = emptyList())
+
+                    val customRestaurantsFlow = remember { userDb.customRestaurantDao().getAllCustomRestaurants() }
+                    val customRestaurants by customRestaurantsFlow.collectAsState(initial = emptyList())
+                    val customRestaurantsById = remember(customRestaurants) { customRestaurants.associateBy { it.id } }
+
+                    val restaurants = remember(osmRestaurants, customRestaurants) {
+                        mergeVenueLists(osmRestaurants, customRestaurants)
+                    }
                     val baseRestaurantsById = remember(restaurants) { restaurants.associateBy { it.id } }
 
                     val favoritesFlow = remember { userDb.favoriteDao().getAllFavorites() }
@@ -180,10 +189,16 @@ class MainActivity : ComponentActivity() {
                     var selectedRestaurantIdForDetail by remember { mutableStateOf<String?>(null) }
                     var selectedRestaurantForWishlist by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForAddDish by remember { mutableStateOf<Restaurant?>(null) }
+                    var editingDishWishlist by remember { mutableStateOf<Pair<Restaurant, DishWishlist>?>(null) }
                     var selectedRestaurantForAddFavDish by remember { mutableStateOf<Restaurant?>(null) }
+                    var editingFavoriteDish by remember { mutableStateOf<Pair<Restaurant, FavoriteDish>?>(null) }
                     var selectedRestaurantIdForEdit by remember { mutableStateOf<String?>(null) }
                     var selectedRestaurantForManualInsight by remember { mutableStateOf<Restaurant?>(null) }
                     var selectedRestaurantForVisitLog by remember { mutableStateOf<Restaurant?>(null) }
+                    var editingVisitLog by remember { mutableStateOf<Pair<Restaurant, VisitLog>?>(null) }
+                    var editingPhoto by remember { mutableStateOf<Pair<Restaurant, RestaurantPhoto>?>(null) }
+                    var isAddRestaurantOpen by remember { mutableStateOf(false) }
+                    var editingCustomRestaurant by remember { mutableStateOf<CustomRestaurant?>(null) }
 
                     val toggleFavorite: (String) -> Unit = { restaurantId ->
                         lifecycleScope.launch {
@@ -215,6 +230,7 @@ class MainActivity : ComponentActivity() {
                                 checkAndRequestLocationPermissions()
                             }
                         },
+                        onAddRestaurantClick = { isAddRestaurantOpen = true },
                         onFavoriteToggle = toggleFavorite,
                         onWishlistClick = { selectedRestaurantForWishlist = it },
                         onSettingsClick = { isSettingsOpen = true },
@@ -310,7 +326,14 @@ class MainActivity : ComponentActivity() {
                                 manualInsight = manualInsightsMap[restaurantId],
                                 photos = photosMap[restaurantId] ?: emptyList(),
                                 visitLogs = visitLogsMap[restaurantId] ?: emptyList(),
-                                onEditRestaurantClick = { selectedRestaurantIdForEdit = restaurantId },
+                                onEditRestaurantClick = {
+                                    val custom = customRestaurantsById[restaurantId]
+                                    if (custom != null) {
+                                        editingCustomRestaurant = custom
+                                    } else {
+                                        selectedRestaurantIdForEdit = restaurantId
+                                    }
+                                },
                                 onEditManualInsightClick = { selectedRestaurantForManualInsight = effectiveRestaurant },
                                 onAddPhotoCameraClick = {
                                     pendingPhotoRestaurantId = restaurantId
@@ -322,6 +345,12 @@ class MainActivity : ComponentActivity() {
                                     pendingPhotoRestaurantId = restaurantId
                                     pickGalleryPhotoLauncher.launch("image/*")
                                 },
+                                onEditPhotoClick = { photo ->
+                                    editingPhoto = effectiveRestaurant to photo
+                                },
+                                onSharePhotoClick = { photo ->
+                                    IntentHelper.sharePhoto(this, effectiveRestaurant, photo)
+                                },
                                 onDeletePhotoClick = { photo ->
                                     lifecycleScope.launch {
                                         userDb.restaurantPhotoDao().deletePhoto(photo)
@@ -331,6 +360,12 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onAddVisitLogClick = { selectedRestaurantForVisitLog = effectiveRestaurant },
+                                onEditVisitLogClick = { visit ->
+                                    editingVisitLog = effectiveRestaurant to visit
+                                },
+                                onShareVisitLogClick = { visit ->
+                                    IntentHelper.shareVisitLog(this, effectiveRestaurant, visit)
+                                },
                                 onDeleteVisitLogClick = { visit ->
                                     lifecycleScope.launch {
                                         userDb.visitLogDao().deleteVisitLog(visit)
@@ -347,6 +382,18 @@ class MainActivity : ComponentActivity() {
                                 onAddDishClick = {
                                     selectedRestaurantForAddDish = effectiveRestaurant
                                 },
+                                onEditDishClick = { dish ->
+                                    editingDishWishlist = effectiveRestaurant to dish
+                                },
+                                onShareDishClick = { dish ->
+                                    IntentHelper.shareDish(
+                                        context = this,
+                                        restaurant = effectiveRestaurant,
+                                        dishName = dish.dishName,
+                                        notes = dish.notes,
+                                        isFavorite = false
+                                    )
+                                },
                                 onDeleteDishClick = { dish ->
                                     lifecycleScope.launch {
                                         userDb.dishWishlistDao().removeDish(dish)
@@ -354,6 +401,18 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAddFavoriteDishClick = {
                                     selectedRestaurantForAddFavDish = effectiveRestaurant
+                                },
+                                onEditFavoriteDishClick = { favDish ->
+                                    editingFavoriteDish = effectiveRestaurant to favDish
+                                },
+                                onShareFavoriteDishClick = { favDish ->
+                                    IntentHelper.shareDish(
+                                        context = this,
+                                        restaurant = effectiveRestaurant,
+                                        dishName = favDish.dishName,
+                                        notes = favDish.notes,
+                                        isFavorite = true
+                                    )
                                 },
                                 onDeleteFavoriteDishClick = { favDish ->
                                     lifecycleScope.launch {
@@ -415,11 +474,12 @@ class MainActivity : ComponentActivity() {
                     selectedRestaurantForVisitLog?.let { restaurant ->
                         AddVisitLogDialog(
                             restaurant = restaurant,
-                            onSave = { rating, orderedDishes, notes ->
+                            onSave = { visitedAt, rating, orderedDishes, notes ->
                                 lifecycleScope.launch {
                                     userDb.visitLogDao().upsertVisitLog(
                                         VisitLog(
                                             restaurantId = restaurant.id,
+                                            visitedAt = visitedAt,
                                             rating = rating,
                                             orderedDishes = orderedDishes,
                                             notes = notes
@@ -429,6 +489,27 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onDismiss = { selectedRestaurantForVisitLog = null }
+                        )
+                    }
+
+                    editingVisitLog?.let { (restaurant, existingVisit) ->
+                        AddVisitLogDialog(
+                            restaurant = restaurant,
+                            existingVisitLog = existingVisit,
+                            onSave = { visitedAt, rating, orderedDishes, notes ->
+                                lifecycleScope.launch {
+                                    userDb.visitLogDao().updateVisitLog(
+                                        existingVisit.copy(
+                                            visitedAt = visitedAt,
+                                            rating = rating,
+                                            orderedDishes = orderedDishes,
+                                            notes = notes
+                                        )
+                                    )
+                                    editingVisitLog = null
+                                }
+                            },
+                            onDismiss = { editingVisitLog = null }
                         )
                     }
 
@@ -463,6 +544,25 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    editingPhoto?.let { (restaurant, photo) ->
+                        AddPhotoMetadataDialog(
+                            restaurant = restaurant,
+                            existingPhoto = photo,
+                            onSave = { category, caption ->
+                                lifecycleScope.launch {
+                                    userDb.restaurantPhotoDao().updatePhoto(
+                                        photo.copy(
+                                            category = category,
+                                            caption = caption
+                                        )
+                                    )
+                                    editingPhoto = null
+                                }
+                            },
+                            onDismiss = { editingPhoto = null }
+                        )
+                    }
+
                     selectedRestaurantForAddFavDish?.let { restaurant ->
                         AddFavoriteDishDialog(
                             restaurant = restaurant,
@@ -482,6 +582,25 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    editingFavoriteDish?.let { (restaurant, existingDish) ->
+                        AddFavoriteDishDialog(
+                            restaurant = restaurant,
+                            existingDish = existingDish,
+                            onSave = { dishName, notes ->
+                                lifecycleScope.launch {
+                                    userDb.favoriteDishDao().addOrUpdateFavoriteDish(
+                                        existingDish.copy(
+                                            dishName = dishName,
+                                            notes = notes
+                                        )
+                                    )
+                                    editingFavoriteDish = null
+                                }
+                            },
+                            onDismiss = { editingFavoriteDish = null }
+                        )
+                    }
+
                     selectedRestaurantForAddDish?.let { restaurant ->
                         AddDishDialog(
                             restaurant = restaurant,
@@ -498,6 +617,87 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onDismiss = { selectedRestaurantForAddDish = null }
+                        )
+                    }
+
+                    editingDishWishlist?.let { (restaurant, existingDish) ->
+                        AddDishDialog(
+                            restaurant = restaurant,
+                            existingDish = existingDish,
+                            onSave = { dishName, notes ->
+                                lifecycleScope.launch {
+                                    userDb.dishWishlistDao().addOrUpdateDish(
+                                        existingDish.copy(
+                                            dishName = dishName,
+                                            notes = notes
+                                        )
+                                    )
+                                    editingDishWishlist = null
+                                }
+                            },
+                            onDismiss = { editingDishWishlist = null }
+                        )
+                    }
+
+                    if (isAddRestaurantOpen || editingCustomRestaurant != null) {
+                        val existingCustom = editingCustomRestaurant
+                        AddRestaurantDialog(
+                            currentAnchor = effectiveAnchor,
+                            existingCustomRestaurant = existingCustom,
+                            isAlreadyInWantToTry = existingCustom != null && wishlistMap.containsKey(existingCustom.id),
+                            onSave = { custom, addToWantToTry, priority, wantNotes ->
+                                lifecycleScope.launch {
+                                    userDb.customRestaurantDao().upsertCustomRestaurant(custom)
+                                    if (addToWantToTry) {
+                                        userDb.wishlistDao().addOrUpdateWishlist(
+                                            Wishlist(
+                                                restaurantId = custom.id,
+                                                notes = wantNotes,
+                                                priority = priority
+                                            )
+                                        )
+                                    }
+                                    isAddRestaurantOpen = false
+                                    editingCustomRestaurant = null
+                                }
+                            },
+                            onDelete = existingCustom?.let { custom ->
+                                {
+                                    lifecycleScope.launch {
+                                        val resId = custom.id
+                                        (photosMap[resId] ?: emptyList()).forEach { photo ->
+                                            userDb.restaurantPhotoDao().deletePhoto(photo)
+                                            withContext(Dispatchers.IO) {
+                                                PhotoStorageManager.deletePhotoFile(applicationContext, photo.relativePath)
+                                            }
+                                        }
+                                        (visitLogsMap[resId] ?: emptyList()).forEach { visit ->
+                                            userDb.visitLogDao().deleteVisitLog(visit)
+                                        }
+                                        (favoriteDishMap[resId] ?: emptyList()).forEach { favDish ->
+                                            userDb.favoriteDishDao().removeFavoriteDish(favDish)
+                                        }
+                                        (dishWishlistMap[resId] ?: emptyList()).forEach { dish ->
+                                            userDb.dishWishlistDao().removeDish(dish)
+                                        }
+                                        userDb.manualInsightDao().deleteManualInsight(resId)
+                                        userDb.restaurantOverrideDao().deleteOverride(resId)
+                                        userDb.wishlistDao().removeWishlistByRestaurantId(resId)
+                                        if (favoriteIds.contains(resId)) {
+                                            userDb.favoriteDao().removeFavorite(Favorite(resId))
+                                        }
+                                        userDb.customRestaurantDao().removeCustomRestaurant(custom)
+                                        editingCustomRestaurant = null
+                                        if (selectedRestaurantIdForDetail == resId) {
+                                            selectedRestaurantIdForDetail = null
+                                        }
+                                    }
+                                }
+                            },
+                            onDismiss = {
+                                isAddRestaurantOpen = false
+                                editingCustomRestaurant = null
+                            }
                         )
                     }
 

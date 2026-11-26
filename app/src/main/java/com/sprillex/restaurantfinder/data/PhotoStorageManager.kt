@@ -138,6 +138,20 @@ object PhotoStorageManager {
         return if (file.exists()) file.delete() else false
     }
 
+    /**
+     * Resolves a stored photo to a shareable `content://` URI via [FileProvider]
+     * (`${context.packageName}.fileprovider`). Returns `null` if the file does not exist.
+     */
+    fun getShareablePhotoUri(context: Context, relativePath: String): Uri? {
+        val file = resolvePhotoFile(context, relativePath)
+        if (!file.exists()) return null
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+    }
+
     fun loadScaledBitmap(file: File, maxEdgePx: Int = 800): Bitmap? {
         if (!file.exists()) return null
         return try {

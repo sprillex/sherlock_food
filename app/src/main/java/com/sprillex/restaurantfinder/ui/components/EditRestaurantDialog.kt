@@ -290,7 +290,7 @@ fun EditRestaurantDialog(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun FlagSelectorRow(
+internal fun FlagSelectorRow(
     label: String,
     selectedValue: String?,
     options: List<String>,
